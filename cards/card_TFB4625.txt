@@ -1,0 +1,17 @@
+====================================================================
+                     TEMPEST FEDERAL BANK                           
+                 OFFICIAL DIGITAL ACCOUNT CARD                      
+====================================================================
+  [EMV CHIP]                                                        
+                                                                    
+  ACCOUNT NUMBER : TFB4625                                          
+  ACCOUNT HOLDER : Thomas Jefferson                                 
+  ACCOUNT TYPE   : Current                                          
+  DATE OF BIRTH  : 1992-04-13                                       
+  PHONE NUMBER   : 8765432109                                        
+  MEMBER SINCE   : 2026-11-02 19:47:27                                
+  STATUS         : ACTIVE                                           
+====================================================================
+   Security Notice: Keep your 4-digit PIN confidential at all times. 
+   Tempest Federal Bank - 24/7 Priority Support: support@tfb.bank    
+====================================================================

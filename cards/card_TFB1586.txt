@@ -1,0 +1,17 @@
+====================================================================
+                     TEMPEST FEDERAL BANK                           
+                 OFFICIAL DIGITAL ACCOUNT CARD                      
+====================================================================
+  [EMV CHIP]                                                        
+                                                                    
+  ACCOUNT NUMBER : TFB1586                                          
+  ACCOUNT HOLDER : HARIHARAN A                                      
+  ACCOUNT TYPE   : Savings                                          
+  DATE OF BIRTH  : 2008-09-25                                       
+  PHONE NUMBER   : 07200139242                                       
+  MEMBER SINCE   : 2026-11-02 20:09:12                                
+  STATUS         : ACTIVE                                           
+====================================================================
+   Security Notice: Keep your 4-digit PIN confidential at all times. 
+   Tempest Federal Bank - 24/7 Priority Support: support@tfb.bank    
+====================================================================

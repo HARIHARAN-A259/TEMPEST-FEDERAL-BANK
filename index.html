@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tempest Federal Bank - Online Banking Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold-1: #dcb95f;
+    --gold-2: #b48a2c;
+    --gold-3: #7d5a12;
+    --navy-dark: #0a1b33;
+    --navy: #14284b;
+    --navy-mid: #1a5499;
+    --navy-light: #2c6ebf;
+    --ink: #1e2633;
+    --muted: #5b6470;
+    --line: #cfd6de;
+    --bg-light: #f5f7fa;
+    --bg-card: #ffffff;
+    --success: #1b8a4f;
+    --danger: #b3261e;
+    --ease: cubic-bezier(.65, 0, .25, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; background: #ffffff; font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif; color: var(--ink); }
+
+  /* Top Backend Status Indicator */
+  .backend-status {
+    position: fixed; top: 14px; right: 18px; z-index: 1000;
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #d9e1ec; border-radius: 20px;
+    padding: 6px 14px; font-size: 0.82rem; font-weight: 500;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06); backdrop-filter: blur(8px);
+  }
+  .backend-status .dot { width: 9px; height: 9px; border-radius: 50%; background: #28a745; display: inline-block; }
+  .backend-status.offline .dot { background: #e67e22; }
+
+  /* Animated Intro Slide */
+  .slide { position: relative; min-height: 100vh; overflow-x: hidden; padding-bottom: 3rem; background: #ffffff; }
+
+  /* Brand block: starts centred, later glides up */
+  .brand {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(1.5rem, 5.4vw, 3.8rem);
+    line-height: 1.3; z-index: 2; cursor: pointer;
+    transition: top 1.6s var(--ease);
+  }
+  .brand.up { top: clamp(48px, 10vh, 75px); }
+
+  /* Mark: dot -> vertical line */
+  .mark {
+    position: absolute; left: 50%; top: 50%;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--gold-1), var(--gold-2) 60%, var(--gold-3));
+    box-shadow: 0 0 16px 2px rgba(180, 138, 44, .45);
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform .8s var(--ease), width 1s var(--ease), height 1s var(--ease),
+                border-radius 1s var(--ease), opacity .9s ease;
+  }
+  .brand.dot  .mark { transform: translate(-50%, -50%) scale(1); }
+  .brand.line .mark { width: 3px; height: var(--h, 64px); border-radius: 3px; }
+  .brand.open .mark { opacity: 0; }
+
+  /* Name: gold, revealed outward from the centre line */
+  .name {
+    font-family: "Cinzel", Georgia, serif;
+    font-weight: 600; font-size: 1em; line-height: 1.3;
+    letter-spacing: .08em; white-space: nowrap; padding: 0 .1em;
+    background: linear-gradient(180deg, var(--gold-1) 0%, var(--gold-2) 50%, var(--gold-3) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent; clip-path: inset(0 50% 0 50%);
+    transition: clip-path 1.5s var(--ease);
+  }
+  .brand.open .name { clip-path: inset(-10% 0 -10% 0); }
+
+  /* Logo: sits at the left of the name */
+  .logo-slot {
+    flex: none; width: 0; height: 1.3em; margin-right: 0;
+    overflow: hidden; opacity: 0;
+    transition: width 1.2s var(--ease), margin-right 1.2s var(--ease), opacity 1.2s ease;
+  }
+  .logo-slot img { height: 100%; width: auto; display: block; mix-blend-mode: multiply; }
+  .brand.logo-in .logo-slot { width: calc(1.3em * 1.835); margin-right: .35em; opacity: 1; }
+
+  /* Card Container */
+  .card {
+    position: absolute; left: 50%; top: clamp(120px, 17vh, 160px);
+    width: min(92vw, 450px);
+    --pad: clamp(1.4rem, 5vw, 2.4rem);
+    padding: var(--pad); background: #fff;
+    border: 1px solid #e3e8ef; border-radius: 18px;
+    box-shadow: 0 16px 45px rgba(20, 50, 100, .10);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transform: translate(-50%, 24px);
+    transition: opacity .8s ease, transform .8s var(--ease), visibility 0s linear .8s;
+    z-index: 5;
+  }
+  .card.in { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); transition-delay: 0s; }
+  .card h2 { font-size: clamp(1.4rem, 4.6vw, 1.8rem); font-weight: 600; text-align: center; margin-bottom: 1.4rem; color: #14284b; }
+  
+  .field { margin-bottom: 1.1rem; }
+  .field label { display: block; margin-bottom: .45rem; color: var(--muted); font-size: 0.95rem; font-weight: 500; }
+  .control { position: relative; }
+  .control input, select {
+    width: 100%; height: 3.2rem; padding: 0 1rem;
+    font: inherit; font-size: 1.02rem; color: var(--ink);
+    background: #f7f9fc; border: 1px solid var(--line); border-radius: 10px;
+    outline: none; transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  select {
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8' fill='none' stroke='%23666' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M1 1l6 6 6-6'/></svg>");
+    background-repeat: no-repeat; background-position: right 1rem center; padding-right: 2.5rem;
+  }
+  .control input:focus-visible, select:focus-visible {
+    background: #fff; border-color: var(--navy-mid);
+    box-shadow: 0 0 0 3px rgba(26, 84, 153, .18);
+  }
+  .control.pw input { padding-right: 4.6rem; }
+  .field.bad input, .field.bad select { border-color: var(--danger); background: #fff5f5; }
+  .error { min-height: 1.2em; margin-top: .3rem; font-size: .84rem; color: var(--danger); }
+  
+  .show, .eye {
+    position: absolute; right: .6rem; top: 50%; transform: translateY(-50%);
+    padding: .4rem .6rem; font: inherit; font-size: .88rem; color: #697484;
+    background: none; border: 0; border-radius: 6px; cursor: pointer;
+  }
+  .show:hover, .eye:hover { color: var(--navy-mid); }
+  .row { display: flex; justify-content: flex-end; margin: .2rem 0 1.2rem; }
+  .link { font: inherit; font-weight: 600; color: #0f3763; background: none; border: 0; padding: .2rem 0; cursor: pointer; text-decoration: none; }
+  .link:hover { text-decoration: underline; }
+  
+  .submit {
+    width: 100%; height: 3.3rem;
+    font: inherit; font-size: 1.08rem; font-weight: 600; color: #fff;
+    background: var(--navy-mid); border: 0; border-radius: 10px; cursor: pointer;
+    transition: background .2s, transform .1s;
+  }
+  .submit:hover { background: #154682; }
+  .submit:active { transform: scale(0.99); }
+  .status { min-height: 1.3em; margin-top: .8rem; text-align: center; font-size: .92rem; font-weight: 500; }
+  .status.success { color: var(--success); }
+  .status.error { color: var(--danger); }
+  .foot { margin-top: .8rem; text-align: center; color: var(--muted); font-size: .95rem; }
+
+  /* Register Card Specifics */
+  .card.reg { width: min(94vw, 560px); }
+  .card.reg h2 { font-family: "EB Garamond", Georgia, serif; font-size: clamp(1.8rem, 5.5vw, 2.3rem); margin-bottom: .3rem; }
+  .card.reg .lead { text-align: center; font-size: .95rem; color: var(--muted); margin-bottom: 1.4rem; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+  @media (max-width: 520px) { .two { grid-template-columns: 1fr; } }
+  .card.reg .submit { background: #0b2f63; }
+  .card.reg .submit:hover { background: #08244d; }
+
+  /* Forgot Card */
+  .card.fp { width: min(92vw, 480px); }
+  .fp-head {
+    margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) 1.4rem;
+    padding: 1.4rem 1rem 1.2rem; text-align: center;
+    border-bottom: 1px solid #e8ecf1; font-family: "Cinzel", Georgia, serif; line-height: 1.15;
+    background: linear-gradient(180deg, #c9a24a 0%, #a67c1f 60%, #7d5a12 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .fp-head b { display: block; font-size: 1.8rem; font-weight: 700; letter-spacing: .06em; }
+  .fp-head span { display: block; font-size: 1.05rem; font-weight: 500; letter-spacing: .05em; }
+
+  /* ========================================================================= */
+  /* Downloadable Digital Debit/Account Card (Prompt Requirement)             */
+  /* ========================================================================= */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(10, 25, 47, 0.65);
+    backdrop-filter: blur(6px); z-index: 2000;
+    display: none; place-items: center; padding: 1.5rem;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .modal-overlay.open { display: grid; opacity: 1; }
+  .modal-content {
+    background: #ffffff; width: min(94vw, 520px); border-radius: 20px;
+    padding: 2rem; box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+    transform: scale(0.95); transition: transform 0.3s var(--ease);
+  }
+  .modal-overlay.open .modal-content { transform: scale(1); }
+
+  /* The Luxury Physical Card Mockup */
+  .digital-card {
+    position: relative; width: 100%; aspect-ratio: 1.586;
+    border-radius: 16px; padding: 1.6rem;
+    background: linear-gradient(135deg, #182848 0%, #0d172a 50%, #1c325c 100%);
+    box-shadow: 0 16px 35px rgba(10, 25, 47, 0.35), inset 0 0 0 1px rgba(220, 185, 95, 0.35);
+    color: #ffffff; display: flex; flex-direction: column; justify-content: space-between;
+    overflow: hidden; margin-bottom: 1.5rem;
+  }
+  .digital-card::before {
+    content: ''; position: absolute; inset: -50%;
+    background: radial-gradient(circle at 75% 25%, rgba(220, 185, 95, 0.22), transparent 60%);
+    pointer-events: none;
+  }
+  .digital-card .dc-top { display: flex; justify-content: space-between; align-items: center; z-index: 1; }
+  .digital-card .dc-bank { font-family: "Cinzel", serif; font-size: 1.15rem; font-weight: 700; letter-spacing: 0.1em; color: var(--gold-1); }
+  .digital-card .dc-chip { width: 44px; height: 32px; background: linear-gradient(135deg, #dcb95f 0%, #aa8022 100%); border-radius: 6px; box-shadow: inset 0 0 4px rgba(0,0,0,0.3); }
+  .digital-card .dc-number { font-family: "Cinzel", monospace; font-size: clamp(1.4rem, 4.5vw, 1.85rem); letter-spacing: 0.18em; font-weight: 600; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 1; margin: 0.8rem 0; }
+  .digital-card .dc-bottom { display: flex; justify-content: space-between; align-items: flex-end; z-index: 1; }
+  .digital-card .dc-label { font-size: 0.68rem; text-transform: uppercase; color: var(--gold-1); letter-spacing: 0.08em; margin-bottom: 2px; }
+  .digital-card .dc-val { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; }
+
+  /* ========================================================================= */
+  /* Main Online Banking Dashboard (Post Sign In)                            */
+  /* ========================================================================= */
+  #dashboard {
+    display: none; width: 100%; min-height: 100vh;
+    background: var(--bg-light); padding-bottom: 4rem;
+  }
+  #dashboard.active { display: block; }
+  
+  .dash-nav {
+    background: #ffffff; border-bottom: 1px solid #e3e8ef;
+    padding: 1rem clamp(1rem, 5vw, 3rem);
+    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .dash-brand { display: flex; align-items: center; gap: 12px; }
+  .dash-brand span.title { font-family: "Cinzel", serif; font-size: 1.25rem; font-weight: 700; color: #14284b; }
+  .dash-user-bar { display: flex; align-items: center; gap: 1rem; }
+  .badge-tag { background: #eef3f9; color: var(--navy-mid); padding: 4px 10px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; }
+  .badge-acc { background: #fdf5e2; color: #9c6e09; border: 1px solid #fae29c; padding: 4px 12px; border-radius: 6px; font-weight: 700; font-family: monospace; }
+  .btn-signout {
+    background: none; border: 1px solid #d0d7e2; padding: 7px 15px; border-radius: 8px;
+    font-size: 0.88rem; font-weight: 600; color: #4a5568; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-signout:hover { background: #fee2e2; border-color: #fca5a5; color: var(--danger); }
+
+  .dash-container { max-width: 1140px; margin: 2rem auto; padding: 0 1.2rem; }
+
+  /* Hero Balance Banner */
+  .balance-card {
+    background: linear-gradient(135deg, #0d2144 0%, #15396d 100%);
+    border-radius: 18px; padding: 2.2rem clamp(1.4rem, 4vw, 2.5rem);
+    color: #ffffff; box-shadow: 0 12px 30px rgba(13, 33, 68, 0.16);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem;
+  }
+  .balance-info .bal-label { font-size: 0.95rem; color: #bac7d5; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
+  .balance-info .bal-amount { font-family: "Cinzel", serif; font-size: clamp(2.2rem, 6vw, 3.2rem); font-weight: 700; color: #ffffff; margin: 0.3rem 0; }
+  .balance-info .bal-meta { font-size: 0.92rem; color: #d4e0ee; }
+  .balance-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+  .btn-act {
+    background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff; padding: 9px 18px; border-radius: 10px; font-weight: 600; cursor: pointer;
+    backdrop-filter: blur(8px); transition: all 0.2s;
+  }
+  .btn-act:hover { background: #ffffff; color: var(--navy-dark); }
+
+  /* Tab Navigation */
+  .tabs-nav {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e3e8ef; margin-bottom: 1.8rem;
+  }
+  .tab-btn {
+    background: none; border: 0; padding: 10px 18px; font-size: 0.98rem; font-weight: 600;
+    color: var(--muted); cursor: pointer; border-radius: 8px; white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--navy); background: #eef2f8; }
+  .tab-btn.active { color: var(--navy-mid); background: #e3ebf6; border-bottom: 3px solid var(--navy-mid); border-radius: 8px 8px 0 0; }
+
+  /* Tab Content Panes */
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .pane-card {
+    background: #ffffff; border: 1px solid #e3e8ef; border-radius: 16px;
+    padding: clamp(1.4rem, 4vw, 2.2rem); box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+  }
+  .pane-title { font-size: 1.35rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+  .pane-subtitle { font-size: 0.95rem; color: var(--muted); margin-bottom: 1.6rem; }
+
+  /* Tables */
+  .table-responsive { width: 100%; overflow-x: auto; margin-top: 1rem; }
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 0.94rem; text-align: left; }
+  table.data-table th { background: #f8fafc; padding: 12px 14px; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; }
+  table.data-table td { padding: 12px 14px; border-bottom: 1px solid #edf2f7; vertical-align: middle; }
+  table.data-table tr:hover td { background: #fbfcfe; }
+
+  .badge-type { display: inline-block; padding: 3px 9px; border-radius: 5px; font-size: 0.8rem; font-weight: 700; }
+  .badge-deposit { background: #e6f9ed; color: #166534; }
+  .badge-withdrawal { background: #fee2e2; color: #991b1b; }
+  .badge-transfer { background: #e0f2fe; color: #075985; }
+
+  /* Search & Filter Bar */
+  .search-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 120px;
+    gap: 12px; margin-bottom: 1.5rem;
+  }
+  @media(max-width: 680px) { .search-grid { grid-template-columns: 1fr; } }
+
+  /* Analytics Metric Cards */
+  .metrics-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem; margin-bottom: 2rem;
+  }
+  .metric-card {
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;
+    padding: 1.4rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    border-left: 5px solid var(--navy-mid);
+  }
+  .metric-card.dep { border-left-color: #10b981; }
+  .metric-card.with { border-left-color: #ef4444; }
+  .metric-card.trn { border-left-color: #3b82f6; }
+  .metric-title { font-size: 0.88rem; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .metric-val { font-family: "Cinzel", serif; font-size: 1.8rem; font-weight: 700; color: var(--navy); }
+
+  /* SVG Chart Container */
+  .chart-container {
+    background: #fbfcfd; border: 1px solid #e3e8ef; border-radius: 12px;
+    padding: 1.5rem; margin-top: 1rem;
+  }
+
+  /* Receipt Modal Slip */
+  .receipt-slip {
+    background: #fffdf9; border: 2px dashed #d1b46a; border-radius: 12px;
+    padding: 1.8rem; font-family: "IBM Plex Sans", monospace; color: #222;
+  }
+  .receipt-slip h3 { text-align: center; font-family: "Cinzel", serif; font-size: 1.4rem; color: #7d5a12; margin-bottom: 4px; }
+  .receipt-slip .sub { text-align: center; font-size: 0.85rem; color: #777; margin-bottom: 1.2rem; }
+  .receipt-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #e3d5b0; font-size: 0.92rem; }
+  .receipt-row.total { border-top: 2px solid #7d5a12; border-bottom: none; font-weight: bold; font-size: 1.05rem; margin-top: 8px; padding-top: 10px; }
+</style>
+</head>
+<body>
+
+  <!-- Server Connection Status Pill -->
+  <div class="backend-status" id="backend-status">
+    <span class="dot"></span>
+    <span id="status-text">Detecting Server...</span>
+  </div>
+
+  <!-- Intro Screen & Forms Container -->
+  <main class="slide" id="slide">
+    <div class="brand" id="brand">
+      <span class="logo-slot">
+        <img alt="Tempest Federal Bank logo" src="logo.jpg">
+      </span>
+      <span class="mark" id="mark"></span>
+      <h1 class="name" id="name">Tempest Federal Bank</h1>
+    </div>
+
+    <!-- 1. Sign In Card -->
+    <form class="card" id="card" novalidate aria-labelledby="signin-title">
+      <h2 id="signin-title">Sign in to your account</h2>
+
+      <div class="field" id="f-user">
+        <label for="user">Account Number (TFBXXXX) or Phone</label>
+        <div class="control"><input id="user" name="user" type="text" placeholder="e.g. TFB1024 or 9876543210" autocomplete="username"></div>
+        <div class="error" id="e-user" aria-live="polite"></div>
+      </div>
+
+      <div class="field" id="f-pass">
+        <label for="pass">4-Digit Security PIN</label>
+        <div class="control pw">
+          <input id="pass" name="pass" type="password" maxlength="4" placeholder="••••" inputmode="numeric">
+          <button type="button" class="show" id="show">Show</button>
+        </div>
+        <div class="error" id="e-pass" aria-live="polite"></div>
+      </div>
+
+      <div class="row"><button type="button" class="link" id="forgot">Forgot Account Number?</button></div>
+      <button type="submit" class="submit">Sign In</button>
+      <p class="status" id="status" role="status"></p>
+      <p class="foot">New customer? <button type="button" class="link" id="register">Create an Account</button></p>
+    </form>
+
+    <!-- 2. Sign Up / Register Card -->
+    <form class="card reg" id="reg" novalidate aria-labelledby="reg-title">
+      <h2 id="reg-title">Create Your Account</h2>
+      <p class="lead">Welcome to Tempest Federal. Sign up below to access secure banking services.</p>
+
+      <div class="two">
+        <div class="field"><label for="r-name">Full Name</label>
+          <div class="control"><input id="r-name" type="text" placeholder="e.g. Alexander Hamilton"></div><div class="error"></div></div>
+        <div class="field"><label for="r-dob">Date of Birth</label>
+          <div class="control"><input id="r-dob" type="date"></div><div class="error"></div></div>
+      </div>
+
+      <div class="two">
+        <div class="field"><label for="r-phone">Phone Number</label>
+          <div class="control"><input id="r-phone" type="tel" placeholder="e.g. 9876543210"></div><div class="error"></div></div>
+        <div class="field"><label for="r-email">Email Address</label>
+          <div class="control"><input id="r-email" type="email" placeholder="customer@tfb.bank"></div><div class="error"></div></div>
+      </div>
+
+      <div class="two">
+        <div class="field"><label for="r-type">Account Type (Select one)</label>
+          <div class="control">
+            <select id="r-type">
+              <option value="">Select Account Type...</option>
+              <option value="Savings">Savings Account</option>
+              <option value="Current">Current Account</option>
+            </select>
+          </div><div class="error"></div></div>
+        <div class="field"><label for="r-deposit">Initial Deposit Amount ($)</label>
+          <div class="control"><input id="r-deposit" type="number" min="0" step="10" value="500"></div><div class="error"></div></div>
+      </div>
+
+      <div class="two">
+        <div class="field"><label for="r-pass">Set 4-Digit Security PIN</label>
+          <div class="control pw"><input id="r-pass" type="password" maxlength="4" placeholder="4 digits" inputmode="numeric"><button type="button" class="eye" data-target="r-pass">Show</button></div><div class="error"></div></div>
+        <div class="field"><label for="r-pass2">Confirm 4-Digit PIN</label>
+          <div class="control pw"><input id="r-pass2" type="password" maxlength="4" placeholder="Confirm PIN" inputmode="numeric"><button type="button" class="eye" data-target="r-pass2">Show</button></div><div class="error"></div></div>
+      </div>
+
+      <button type="submit" class="submit">Create Account & Issue Card</button>
+      <p class="status" id="r-status" role="status"></p>
+      <p class="foot">Already have an account? <button type="button" class="link" id="to-signin">Sign In</button></p>
+    </form>
+
+    <!-- 3. Forgot Account Number Card -->
+    <form class="card fp" id="fp" novalidate aria-labelledby="fp-title">
+      <div class="fp-head" aria-label="Tempest Federal Bank"><b>TEMPEST</b><span>FEDERAL BANK</span></div>
+      <h2 id="fp-title">Recover Account Number</h2>
+      <p class="lead">Enter your registered phone number and date of birth to retrieve your account number.</p>
+
+      <div class="field">
+        <label for="fp-phone">Registered Phone Number</label>
+        <div class="control"><input id="fp-phone" type="tel" placeholder="e.g. 9876543210"></div>
+        <div class="error"></div>
+      </div>
+
+      <div class="field">
+        <label for="fp-dob">Date of Birth</label>
+        <div class="control"><input id="fp-dob" type="date"></div>
+        <div class="error"></div>
+      </div>
+
+      <button type="submit" class="submit">Find Account Number</button>
+      <p class="status" id="fp-status" role="status"></p>
+      <p class="foot"><button type="button" class="link" id="fp-back">Back to Sign In</button></p>
+    </form>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- Downloadable Card Modal (Prompt Requirement)                             -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="card-modal">
+    <div class="modal-content">
+      <h2 style="font-family:'Cinzel', serif; font-size:1.5rem; text-align:center; color:var(--navy); margin-bottom:0.3rem;">Digital Account Card Issued</h2>
+      <p style="text-align:center; color:var(--muted); font-size:0.92rem; margin-bottom:1.4rem;">Your Tempest Federal Bank official card is ready for download.</p>
+      
+      <!-- The Physical Luxury Card Mockup -->
+      <div class="digital-card" id="physical-card">
+        <div class="dc-top">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <img src="logo.jpg" alt="Logo" style="height:26px; width:auto; border-radius:4px; background:#fff; padding:2px;">
+            <span class="dc-bank">TEMPEST FEDERAL</span>
+          </div>
+          <div class="dc-chip"></div>
+        </div>
+        <div class="dc-number" id="dc-acc-num">TFB ••••</div>
+        <div class="dc-bottom">
+          <div>
+            <div class="dc-label">CARDHOLDER</div>
+            <div class="dc-val" id="dc-name">Customer Name</div>
+          </div>
+          <div>
+            <div class="dc-label">ACCOUNT TYPE</div>
+            <div class="dc-val" id="dc-type">Savings</div>
+          </div>
+          <div>
+            <div class="dc-label">DOB</div>
+            <div class="dc-val" id="dc-dob">YYYY-MM-DD</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.8rem; justify-content:center;">
+        <button type="button" class="submit" style="background:#0b2f63;" id="btn-download-card">📥 Download Card (PNG)</button>
+        <button type="button" class="submit" style="background:#52647c;" id="btn-card-done">Proceed to Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- Official Transaction Receipt Modal                                      -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="receipt-modal">
+    <div class="modal-content" style="max-width:480px;">
+      <div class="receipt-slip" id="printable-receipt">
+        <div style="text-align:center; margin-bottom:10px;">
+          <img src="logo.jpg" alt="Tempest Federal Logo" style="height:44px; width:auto; mix-blend-mode:multiply; object-fit:contain;">
+        </div>
+        <h3>TEMPEST FEDERAL BANK</h3>
+        <div class="sub">Official Transaction Advice & Customer Receipt</div>
+        <div class="receipt-row"><span>Transaction ID:</span><b id="rcpt-id">TXN000000</b></div>
+        <div class="receipt-row"><span>Date & Time:</span><span id="rcpt-time">2026-11-02 12:00:00</span></div>
+        <div class="receipt-row"><span>Account Number:</span><b id="rcpt-acc">TFB0000</b></div>
+        <div class="receipt-row"><span>Transaction Type:</span><span class="badge-type" id="rcpt-type">DEPOSIT</span></div>
+        <div class="receipt-row" id="rcpt-target-row" style="display:none;"><span>Receiver:</span><span id="rcpt-target">TFB9999</span></div>
+        <div class="receipt-row"><span>Transaction Amount:</span><b style="color:var(--navy-mid); font-size:1.1rem;" id="rcpt-amount">$0.00</b></div>
+        <!-- Balance History Section -->
+        <div style="margin: 10px 0 4px; border-top: 1px dashed #d1d9e6; padding-top: 10px;">
+          <div style="font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px;">Balance History</div>
+          <div class="receipt-row" style="font-size:0.88rem;"><span>Opening Balance:</span><span id="rcpt-prev-balance" style="color:#475569;">$0.00</span></div>
+          <div class="receipt-row" style="font-size:0.88rem;"><span>Transaction Effect:</span><span id="rcpt-effect" style="font-weight:700;">—</span></div>
+          <div class="receipt-row" style="font-size:0.88rem;"><span>Closing Balance:</span><span id="rcpt-closing" style="color:var(--navy); font-weight:700;">$0.00</span></div>
+        </div>
+        <div class="receipt-row total"><span>Updated Ledger Balance:</span><span id="rcpt-balance">$0.00</span></div>
+        <p style="text-align:center; font-size:0.75rem; color:#888; margin-top:1.2rem;">Status: SUCCESSFUL - VERIFIED BY TFB CORE<br>Thank you for banking with Tempest Federal.</p>
+      </div>
+      <div style="display:flex; gap:0.8rem; margin-top:1.4rem;">
+        <button type="button" class="submit" style="background:var(--navy-mid);" id="btn-download-receipt">📥 Download (.txt)</button>
+        <button type="button" class="submit" style="background:#64748b;" onclick="document.getElementById('receipt-modal').classList.remove('open')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- Transfer Confirmation Modal (Receiver Name Preview Requirement)         -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="transfer-confirm-modal">
+    <div class="modal-content" style="max-width:460px;">
+      <h3 style="font-family:'Cinzel', serif; font-size:1.4rem; color:var(--navy); margin-bottom:0.4rem; text-align:center;">Confirm Money Transfer</h3>
+      <p style="color:var(--muted); font-size:0.92rem; text-align:center; margin-bottom:1.4rem;">Please review the destination details carefully before authorizing.</p>
+      
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:1.2rem; margin-bottom:1.4rem;">
+        <div class="receipt-row"><span>Receiver Name:</span><b style="color:var(--navy-mid); font-size:1.05rem;" id="tc-name">John Doe</b></div>
+        <div class="receipt-row"><span>Receiver Account:</span><b style="font-family:monospace;" id="tc-acc">TFB0000</b></div>
+        <div class="receipt-row"><span>Transfer Amount:</span><b style="color:#166534; font-size:1.15rem;" id="tc-amt">$0.00</b></div>
+      </div>
+
+      <div style="display:flex; gap:0.8rem;">
+        <button type="button" class="submit" style="background:#166534;" id="btn-execute-transfer">Confirm & Send</button>
+        <button type="button" class="submit" style="background:#64748b;" onclick="document.getElementById('transfer-confirm-modal').classList.remove('open')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- Customer Online Banking Portal Dashboard                                -->
+  <!-- ========================================================================= -->
+  <div id="dashboard">
+    <header class="dash-nav">
+      <div class="dash-brand">
+        <img src="logo.jpg" alt="Tempest Federal Bank Logo" style="height:42px; width:auto; mix-blend-mode:multiply; object-fit:contain;">
+        <span class="title">TEMPEST FEDERAL</span>
+      </div>
+
+      <div class="dash-user-bar">
+        <span class="badge-tag" id="d-acc-type">Savings</span>
+        <span class="badge-acc" id="d-acc-num">TFB0000</span>
+        <span style="font-weight:600; color:var(--navy); font-size:0.95rem;" id="d-user-greeting">Welcome, Customer</span>
+        <button class="btn-signout" id="btn-logout">Sign Out</button>
+      </div>
+    </header>
+
+    <div class="dash-container">
+      <!-- Top Balance Banner -->
+      <div class="balance-card">
+        <div class="balance-info">
+          <div class="bal-label">
+            Available Ledger Balance
+            <button type="button" id="toggle-bal-btn" style="background:none; border:0; color:#cbd5e1; cursor:pointer; font-size:0.85rem;">[Show/Hide]</button>
+          </div>
+          <div class="bal-amount" id="d-balance">$ 0.00</div>
+          <div class="bal-meta">Holder: <b id="d-holder-name">---</b> &bull; Phone: <span id="d-phone">---</span> &bull; Status: <span style="color:#4ade80;">Active</span></div>
+        </div>
+        <div class="balance-actions">
+          <button class="btn-act" onclick="switchTab('deposit')">Deposit</button>
+          <button class="btn-act" onclick="switchTab('withdraw')">Withdraw</button>
+          <button class="btn-act" onclick="switchTab('transfer')">Transfer Money</button>
+          <button class="btn-act" id="btn-view-card">View Digital Card</button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="history">Transaction History</button>
+        <button class="tab-btn" data-tab="deposit">Deposit Money</button>
+        <button class="tab-btn" data-tab="withdraw">Withdrawal</button>
+        <button class="tab-btn" data-tab="transfer">Transfer Money</button>
+        <button class="tab-btn" data-tab="analytics">Transaction Analytics</button>
+        <button class="tab-btn" data-tab="settings">Personal Details & PIN</button>
+      </nav>
+
+      <!-- TAB 1: Transaction History & Search -->
+      <div class="tab-pane active" id="pane-history">
+        <div class="pane-card">
+          <h3 class="pane-title">Transaction Ledger</h3>
+          <p class="pane-subtitle">View, search and download receipts for all financial transactions.</p>
+
+          <!-- Search Filter Bar -->
+          <div class="search-grid">
+            <input type="text" id="sh-id" placeholder="Search by Transaction ID...">
+            <input type="date" id="sh-date" title="Filter by date">
+            <select id="sh-type">
+              <option value="ALL">All Transaction Types</option>
+              <option value="DEPOSIT">Deposit</option>
+              <option value="WITHDRAWAL">Withdrawal</option>
+              <option value="TRANSFER_SENT">Transfer Sent</option>
+              <option value="TRANSFER_RECV">Transfer Received</option>
+            </select>
+            <button type="button" class="submit" style="height:3.2rem; background:var(--navy-mid);" id="btn-filter">Filter</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Transaction ID</th>
+                  <th>Date & Time</th>
+                  <th>Type</th>
+                  <th>Details</th>
+                  <th>Amount</th>
+                  <th>Balance</th>
+                  <th>Receipt</th>
+                </tr>
+              </thead>
+              <tbody id="txns-table-body">
+                <tr><td colspan="7" style="text-align:center; color:#888;">No transactions recorded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Deposit Money -->
+      <div class="tab-pane" id="pane-deposit">
+        <div class="pane-card" style="max-width:540px; margin:0 auto;">
+          <h3 class="pane-title">Deposit Money</h3>
+          <p class="pane-subtitle">Add funds directly into your account ledger.</p>
+
+          <form id="form-deposit">
+            <div class="field">
+              <label for="dep-amount">Deposit Amount ($)</label>
+              <div class="control"><input type="number" id="dep-amount" min="1" step="0.01" placeholder="e.g. 500.00" required></div>
+            </div>
+            <div class="field">
+              <label for="dep-pin">4-Digit Security PIN</label>
+              <div class="control"><input type="password" id="dep-pin" maxlength="4" placeholder="••••" required inputmode="numeric"></div>
+            </div>
+            <button type="submit" class="submit" style="background:var(--navy-mid);">Confirm Deposit</button>
+            <p class="status" id="dep-status"></p>
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB 3: Withdrawal -->
+      <div class="tab-pane" id="pane-withdraw">
+        <div class="pane-card" style="max-width:540px; margin:0 auto;">
+          <h3 class="pane-title">Withdraw Funds</h3>
+          <p class="pane-subtitle">Withdraw money with PIN verification.</p>
+
+          <form id="form-withdraw">
+            <div class="field">
+              <label for="wth-amount">Withdrawal Amount ($)</label>
+              <div class="control"><input type="number" id="wth-amount" min="1" step="0.01" placeholder="e.g. 200.00" required></div>
+            </div>
+            <div class="field">
+              <label for="wth-pin">4-Digit Security PIN</label>
+              <div class="control"><input type="password" id="wth-pin" maxlength="4" placeholder="••••" required inputmode="numeric"></div>
+            </div>
+            <button type="submit" class="submit" style="background:#0b2f63;">Authorize Withdrawal</button>
+            <p class="status" id="wth-status"></p>
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB 4: Transfer Money (Displays Receiver Name Before Confirming) -->
+      <div class="tab-pane" id="pane-transfer">
+        <div class="pane-card" style="max-width:540px; margin:0 auto;">
+          <h3 class="pane-title">Transfer to Another Account</h3>
+          <p class="pane-subtitle">Transfer funds securely. Receiver details will be verified before confirmation.</p>
+
+          <form id="form-transfer-step1">
+            <div class="field">
+              <label for="trn-dest">Destination Account Number (TFBXXXX)</label>
+              <div class="control"><input type="text" id="trn-dest" placeholder="e.g. TFB5432" required></div>
+            </div>
+            <div class="field">
+              <label for="trn-amount">Transfer Amount ($)</label>
+              <div class="control"><input type="number" id="trn-amount" min="1" step="0.01" placeholder="e.g. 150.00" required></div>
+            </div>
+            <div class="field">
+              <label for="trn-pin">4-Digit Security PIN</label>
+              <div class="control"><input type="password" id="trn-pin" maxlength="4" placeholder="••••" required inputmode="numeric"></div>
+            </div>
+            <button type="submit" class="submit" style="background:var(--navy-mid);">Verify Receiver & Proceed</button>
+            <p class="status" id="trn-status"></p>
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB 5: Transaction Analytics & Visual Chart -->
+      <div class="tab-pane" id="pane-analytics">
+        <div class="pane-card">
+          <h3 class="pane-title">Transaction Analytics</h3>
+          <p class="pane-subtitle">Summary metrics, cash flows, and visual monthly breakdown.</p>
+
+          <div class="metrics-grid">
+            <div class="metric-card dep">
+              <div class="metric-title">Total Money Deposited</div>
+              <div class="metric-val" id="an-deposited">$0.00</div>
+              <div style="font-size:0.8rem; color:#888;" id="an-dep-count">0 deposits</div>
+            </div>
+            <div class="metric-card with">
+              <div class="metric-title">Total Money Withdrawn</div>
+              <div class="metric-val" id="an-withdrawn">$0.00</div>
+              <div style="font-size:0.8rem; color:#888;" id="an-with-count">0 withdrawals</div>
+            </div>
+            <div class="metric-card trn">
+              <div class="metric-title">Total Transferred Out</div>
+              <div class="metric-val" id="an-transferred">$0.00</div>
+              <div style="font-size:0.8rem; color:#888;" id="an-trn-count">0 transfers</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Net Cash Flow</div>
+              <div class="metric-val" id="an-net">$0.00</div>
+              <div style="font-size:0.8rem; color:#888;">Ledger net</div>
+            </div>
+          </div>
+
+          <!-- Interactive Visual Chart -->
+          <h4 style="font-size:1.15rem; color:var(--navy); margin-top:1.5rem;">Monthly Transaction Summary Chart</h4>
+          <div class="chart-container" id="chart-box">
+            <svg id="analytics-svg" viewBox="0 0 700 240" style="width:100%; height:auto; overflow:visible;">
+              <!-- Rendered via JS -->
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 6: Settings, PIN Change & Account Deletion -->
+      <div class="tab-pane" id="pane-settings">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem;">
+          
+          <!-- Update Personal Details Form -->
+          <div class="pane-card">
+            <h3 class="pane-title" style="font-size:1.2rem;">Update Personal Details</h3>
+            <p class="pane-subtitle">Update your profile name, phone number, or date of birth.</p>
+            <form id="form-update-profile">
+              <div class="field">
+                <label for="u-name">Full Name</label>
+                <div class="control"><input type="text" id="u-name" required></div>
+              </div>
+              <div class="field">
+                <label for="u-phone">Phone Number (Requires Uniqueness)</label>
+                <div class="control"><input type="tel" id="u-phone" required></div>
+              </div>
+              <div class="field">
+                <label for="u-dob">Date of Birth</label>
+                <div class="control"><input type="date" id="u-dob" required></div>
+              </div>
+              <div class="field">
+                <label for="u-pin">4-Digit Security PIN (Authorize)</label>
+                <div class="control"><input type="password" id="u-pin" maxlength="4" placeholder="••••" required inputmode="numeric"></div>
+              </div>
+              <button type="submit" class="submit" style="background:var(--navy-mid);">Save Profile Changes</button>
+              <p class="status" id="u-status"></p>
+            </form>
+          </div>
+
+          <!-- Change PIN Form -->
+          <div class="pane-card">
+            <h3 class="pane-title" style="font-size:1.2rem;">Change 4-Digit Security PIN</h3>
+            <p class="pane-subtitle">Enter your existing PIN, then enter your new 4-digit PIN twice.</p>
+            <form id="form-change-pin">
+              <div class="field">
+                <label for="pin-old">Existing 4-Digit PIN</label>
+                <div class="control"><input type="password" id="pin-old" maxlength="4" placeholder="••••" required inputmode="numeric"></div>
+              </div>
+              <div class="field">
+                <label for="pin-new1">New 4-Digit PIN</label>
+                <div class="control"><input type="password" id="pin-new1" maxlength="4" placeholder="••••" required inputmode="numeric"></div>
+              </div>
+              <div class="field">
+                <label for="pin-new2">Confirm New 4-Digit PIN (Enter Twice)</label>
+                <div class="control"><input type="password" id="pin-new2" maxlength="4" placeholder="••••" required inputmode="numeric"></div>
+              </div>
+              <button type="submit" class="submit" style="background:#0b2f63;">Update Security PIN</button>
+              <p class="status" id="pin-status"></p>
+            </form>
+          </div>
+
+          <!-- Danger Zone: Delete Account -->
+          <div class="pane-card" style="border-left: 5px solid var(--danger); grid-column: 1 / -1;">
+            <h3 class="pane-title" style="font-size:1.2rem; color:var(--danger);">Danger Zone: Delete Account</h3>
+            <p class="pane-subtitle">Permanently close and deactivate your bank account. Requires entering phone number and PIN.</p>
+            <form id="form-delete-acc" style="max-width:540px;">
+              <div class="field">
+                <label for="del-phone">Registered Phone Number</label>
+                <div class="control"><input type="tel" id="del-phone" placeholder="Enter your registered phone" required></div>
+              </div>
+              <div class="field">
+                <label for="del-pin">4-Digit Security PIN</label>
+                <div class="control"><input type="password" id="del-pin" maxlength="4" placeholder="••••" required inputmode="numeric"></div>
+              </div>
+              <button type="submit" class="submit" style="background:var(--danger);">Permanently Close Account</button>
+              <p class="status" id="del-status"></p>
+            </form>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  /* ========================================================================= */
+  /* Client Application Logic & Backend Bridge                                 */
+  /* ========================================================================= */
+  const API_BASE = window.location.origin.includes('http') ? window.location.origin : 'http://localhost:8080';
+  let serverOnline = false;
+  let currentUser = null;
+  let balanceVisible = true;
+
+  // DOM Elements
+  const brand = document.getElementById('brand');
+  const name  = document.getElementById('name');
+  const card  = document.getElementById('card');
+  const regCard = document.getElementById('reg');
+  const fpCard = document.getElementById('fp');
+  const views = { signin: card, reg: regCard, forgot: fpCard };
+  let currentView = 'signin';
+  const timers = [];
+
+  /* Check Backend Health */
+  async function checkBackend() {
+    const statusPill = document.getElementById('backend-status');
+    const statusText = document.getElementById('status-text');
+    try {
+      const res = await fetch(`${API_BASE}/api/status`, { method: 'GET', signal: AbortSignal.timeout(1800) });
+      if (res.ok) {
+        serverOnline = true;
+        statusPill.classList.remove('offline');
+        statusText.textContent = 'C Server Connected (:8080)';
+        return;
+      }
+    } catch (e) {
+      serverOnline = false;
+    }
+    statusPill.classList.add('offline');
+    statusText.textContent = 'Direct Browser Storage Mode';
+  }
+  checkBackend();
+  setInterval(checkBackend, 10000);
+
+  /* Play Luxury Brand Animation */
+  function play() {
+    timers.forEach(clearTimeout); timers.length = 0;
+    brand.className = 'brand';
+    card.classList.remove('in'); regCard.classList.remove('in'); fpCard.classList.remove('in');
+    currentView = 'signin';
+    brand.style.setProperty('--h', name.offsetHeight + 'px');
+    void brand.offsetWidth; // restart transitions
+
+    const steps = [
+      [200,  'dot'],
+      [1000, 'line'],
+      [1900, 'open'],
+      [3100, 'up'],
+      [3800, 'logo-in']
+    ];
+    timers.push(setTimeout(() => card.classList.add('in'), 4600));
+    steps.forEach(([t, cls]) => timers.push(setTimeout(() => brand.classList.add(cls), t)));
+  }
+
+  document.fonts.ready.then(play);
+  brand.addEventListener('click', play);
+  window.addEventListener('resize', () => brand.style.setProperty('--h', name.offsetHeight + 'px'));
+
+  // Switch between pre-login cards
+  function go(viewName) {
+    if (viewName === currentView) return;
+    views[currentView].classList.remove('in');
+    currentView = viewName;
+    views[viewName].classList.add('in');
+    setTimeout(() => {
+      const firstInput = views[viewName].querySelector('input');
+      if (firstInput) firstInput.focus({ preventScroll: true });
+    }, 400);
+  }
+
+  document.getElementById('forgot').addEventListener('click', () => go('forgot'));
+  document.getElementById('fp-back').addEventListener('click', () => go('signin'));
+  document.getElementById('register').addEventListener('click', () => go('reg'));
+  document.getElementById('to-signin').addEventListener('click', () => go('signin'));
+
+  // Toggle Password Show/Hide
+  document.getElementById('show').addEventListener('click', e => {
+    const p = document.getElementById('pass');
+    const isPw = p.type === 'password';
+    p.type = isPw ? 'text' : 'password';
+    e.target.textContent = isPw ? 'Hide' : 'Show';
+  });
+
+  document.querySelectorAll('.eye').forEach(b => b.addEventListener('click', () => {
+    const input = document.getElementById(b.dataset.target);
+    const hide = input.type === 'text';
+    input.type = hide ? 'password' : 'text';
+    b.textContent = hide ? 'Show' : 'Hide';
+  }));
+
+  /* ========================================================================= */
+  /* LocalStorage Fallback Storage Engine (When C server is offline)          */
+  /* ========================================================================= */
+  function getLocalAccounts() {
+    return JSON.parse(localStorage.getItem('tfb_accounts') || '[]');
+  }
+  function saveLocalAccounts(accs) {
+    localStorage.setItem('tfb_accounts', JSON.stringify(accs));
+  }
+  function getLocalTransactions() {
+    return JSON.parse(localStorage.getItem('tfb_transactions') || '[]');
+  }
+  function saveLocalTransactions(txns) {
+    localStorage.setItem('tfb_transactions', JSON.stringify(txns));
+  }
+
+  /* ========================================================================= */
+  /* 1. Sign In Handler                                                        */
+  /* ========================================================================= */
+  card.addEventListener('submit', async e => {
+    e.preventDefault();
+    const userVal = document.getElementById('user').value.trim();
+    const pinVal = document.getElementById('pass').value.trim();
+    const st = document.getElementById('status');
+    st.textContent = 'Verifying credentials...'; st.className = 'status';
+
+    if (!userVal || pinVal.length !== 4) {
+      st.textContent = 'Enter a valid Account Number/Phone and 4-digit PIN.';
+      st.className = 'status error';
+      return;
+    }
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/signin`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user: userVal, pin: pinVal })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser = data.account;
+          currentUser.pin = pinVal; /* FIX: store PIN for subsequent API calls */
+          enterDashboard();
+          return;
+        } else {
+          st.textContent = data.error || 'Login failed.';
+          st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // LocalStorage fallback
+    const accs = getLocalAccounts();
+    const found = accs.find(a => (a.accountNumber === userVal || a.phone.replace(/\D/g,'') === userVal.replace(/\D/g,'')) && a.isActive);
+    if (!found) {
+      st.textContent = 'Account not found. Please check details or create an account.';
+      st.className = 'status error';
+    } else if (found.pin !== pinVal) {
+      st.textContent = 'Incorrect 4-digit security PIN.';
+      st.className = 'status error';
+    } else {
+      currentUser = found; /* local storage already has PIN */
+      enterDashboard();
+    }
+  });
+
+  /* ========================================================================= */
+  /* 2. Register / Sign Up Handler                                             */
+  /* ========================================================================= */
+  regCard.addEventListener('submit', async e => {
+    e.preventDefault();
+    const st = document.getElementById('r-status');
+    const nameVal = document.getElementById('r-name').value.trim();
+    const dobVal  = document.getElementById('r-dob').value;
+    const phoneVal = document.getElementById('r-phone').value.trim();
+    const emailVal = document.getElementById('r-email').value.trim();
+    const typeVal  = document.getElementById('r-type').value;
+    const depVal   = parseFloat(document.getElementById('r-deposit').value) || 0;
+    const p1 = document.getElementById('r-pass').value.trim();
+    const p2 = document.getElementById('r-pass2').value.trim();
+
+    if (!nameVal || !dobVal || !phoneVal || !typeVal || p1.length !== 4 || p1 !== p2) {
+      st.textContent = 'Please complete all required fields and ensure 4-digit PIN matches.';
+      st.className = 'status error';
+      return;
+    }
+
+    st.textContent = 'Processing registration...'; st.className = 'status';
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/signup`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: nameVal, dob: dobVal, phone: phoneVal, email: emailVal,
+            accountType: typeVal, initialDeposit: depVal, pin: p1
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showCardModal(data.account);
+          return;
+        } else {
+          st.textContent = data.error || 'Registration failed.';
+          st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage logic
+    const accs = getLocalAccounts();
+    const normPhone = phoneVal.replace(/\D/g, '');
+    const phoneExists = accs.some(a => a.phone.replace(/\D/g, '') === normPhone && a.isActive);
+    if (phoneExists) {
+      st.textContent = 'Already exists: An account is already registered for this phone number.';
+      st.className = 'status error';
+      return;
+    }
+
+    // Generate unique TFBXXXX
+    let randAcc = '';
+    do {
+      randAcc = 'TFB' + Math.floor(1000 + Math.random() * 9000);
+    } while (accs.some(a => a.accountNumber === randAcc));
+
+    const newAcc = {
+      accountNumber: randAcc,
+      name: nameVal,
+      dob: dobVal,
+      phone: phoneVal,
+      email: emailVal || 'customer@tfb.bank',
+      accountType: typeVal,
+      pin: p1,
+      balance: depVal,
+      isActive: 1,
+      createdAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    };
+
+    accs.push(newAcc);
+    saveLocalAccounts(accs);
+
+    if (depVal > 0) {
+      const txns = getLocalTransactions();
+      txns.push({
+        transactionId: 'TXN' + Date.now().toString().slice(-8),
+        accountNumber: randAcc,
+        type: 'DEPOSIT',
+        amount: depVal,
+        updatedBalance: depVal,
+        targetAccount: '',
+        targetName: '',
+        timestamp: newAcc.createdAt
+      });
+      saveLocalTransactions(txns);
+    }
+
+    showCardModal(newAcc);
+  });
+
+  /* Show Downloadable Card Modal */
+  function showCardModal(account) {
+    document.getElementById('dc-acc-num').textContent = account.accountNumber;
+    document.getElementById('dc-name').textContent = account.name;
+    document.getElementById('dc-type').textContent = account.accountType.toUpperCase();
+    document.getElementById('dc-dob').textContent = account.dob;
+    document.getElementById('card-modal').classList.add('open');
+
+    document.getElementById('btn-download-card').onclick = () => downloadCardFile(account);
+    document.getElementById('btn-card-done').onclick = () => {
+      document.getElementById('card-modal').classList.remove('open');
+      go('signin');
+      document.getElementById('user').value = account.accountNumber;
+      document.getElementById('pass').focus();
+    };
+  }
+
+  /* Download card as PNG using Canvas */
+  function downloadCardFile(acc) {
+    const W = 856, H = 540;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    /* --- Background: luxury dark navy gradient --- */
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0a1628');
+    bg.addColorStop(0.5, '#0f2045');
+    bg.addColorStop(1, '#0a1220');
+    ctx.fillStyle = bg;
+    ctx.roundRect(0, 0, W, H, 28);
+    ctx.fill();
+
+    /* --- Radial glow accents --- */
+    const glow1 = ctx.createRadialGradient(W * 0.75, H * 0.25, 0, W * 0.75, H * 0.25, 280);
+    glow1.addColorStop(0, 'rgba(180,138,44,0.13)');
+    glow1.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow1;
+    ctx.fillRect(0, 0, W, H);
+
+    /* --- Gold border --- */
+    ctx.save();
+    ctx.roundRect(4, 4, W - 8, H - 8, 24);
+    ctx.strokeStyle = 'rgba(220,185,95,0.65)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+
+    /* --- Inner subtle border line --- */
+    ctx.save();
+    ctx.roundRect(14, 14, W - 28, H - 28, 18);
+    ctx.strokeStyle = 'rgba(220,185,95,0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    /* --- Top decorative wave pattern (subtle) --- */
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.arc(W - 80, -80 + i * 30, 120 + i * 40, 0, Math.PI * 2);
+      ctx.strokeStyle = '#dcb95f';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    function drawText(text, x, y, font, color, align = 'left', shadow = false) {
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.textAlign = align;
+      if (shadow) {
+        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+        ctx.shadowBlur = 8;
+      }
+      ctx.fillText(text, x, y);
+      ctx.shadowBlur = 0;
+      ctx.textAlign = 'left';
+    }
+
+    /* Draw logo and bank name with Promise for image load */
+    const renderCard = () => {
+      /* --- EMV Chip (gold rectangle with lines) --- */
+      const cx = W - 90, cy = 44;
+      const chipW = 52, chipH = 40;
+      const chipGrad = ctx.createLinearGradient(cx, cy, cx + chipW, cy + chipH);
+      chipGrad.addColorStop(0, '#d4a520');
+      chipGrad.addColorStop(0.35, '#f0cc60');
+      chipGrad.addColorStop(0.65, '#c8960a');
+      chipGrad.addColorStop(1, '#a87a08');
+      ctx.fillStyle = chipGrad;
+      ctx.beginPath();
+      ctx.roundRect(cx, cy, chipW, chipH, 5);
+      ctx.fill();
+      /* Chip internal lines */
+      ctx.strokeStyle = 'rgba(100,60,0,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx + chipW / 2, cy); ctx.lineTo(cx + chipW / 2, cy + chipH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy + chipH / 2); ctx.lineTo(cx + chipW, cy + chipH / 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy + chipH / 3); ctx.lineTo(cx + chipW, cy + chipH / 3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy + (chipH * 2) / 3); ctx.lineTo(cx + chipW, cy + (chipH * 2) / 3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + chipW / 3, cy); ctx.lineTo(cx + chipW / 3, cy + chipH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + (chipW * 2) / 3, cy); ctx.lineTo(cx + (chipW * 2) / 3, cy + chipH); ctx.stroke();
+
+      /* --- Bank name gold text --- */
+      const nameGrad = ctx.createLinearGradient(0, 38, 0, 72);
+      nameGrad.addColorStop(0, '#f0d070');
+      nameGrad.addColorStop(0.5, '#dcb95f');
+      nameGrad.addColorStop(1, '#a87a08');
+      drawText('TEMPEST FEDERAL', 38, 68, "bold 28px 'Georgia', serif", nameGrad, 'left', true);
+      drawText('BANK', 38, 94, "18px 'Georgia', serif", 'rgba(220,185,95,0.75)');
+
+      /* --- Contactless / NFC icon (top-right area) --- */
+      ctx.save();
+      ctx.strokeStyle = 'rgba(220,185,95,0.55)';
+      ctx.lineWidth = 2;
+      for (let r = 10; r <= 28; r += 8) {
+        ctx.beginPath();
+        ctx.arc(W - 38, 50, r, -0.9, 0.9);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      /* --- Account number (large embossed) --- */
+      const numGrad = ctx.createLinearGradient(0, 240, 0, 300);
+      numGrad.addColorStop(0, '#f5e090');
+      numGrad.addColorStop(0.5, '#dcb95f');
+      numGrad.addColorStop(1, '#9a7020');
+      ctx.font = "bold 48px 'Courier New', monospace";
+      ctx.fillStyle = numGrad;
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 12;
+      ctx.fillText(acc.accountNumber || 'TFB••••', 38, 300);
+      ctx.shadowBlur = 0;
+
+      /* --- Horizontal divider line --- */
+      const divGrad = ctx.createLinearGradient(38, 0, W - 38, 0);
+      divGrad.addColorStop(0, 'rgba(220,185,95,0)');
+      divGrad.addColorStop(0.3, 'rgba(220,185,95,0.5)');
+      divGrad.addColorStop(0.7, 'rgba(220,185,95,0.5)');
+      divGrad.addColorStop(1, 'rgba(220,185,95,0)');
+      ctx.beginPath();
+      ctx.moveTo(38, 330); ctx.lineTo(W - 38, 330);
+      ctx.strokeStyle = divGrad;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      /* --- Bottom info labels and values --- */
+      const labelColor = 'rgba(180,138,44,0.75)';
+      const valueColor = '#e8d8a0';
+
+      /* Cardholder */
+      drawText('CARDHOLDER', 38, 372, "10px 'Arial', sans-serif", labelColor);
+      drawText((acc.name || 'CUSTOMER').toUpperCase(), 38, 400, "bold 18px 'Georgia', serif", valueColor, 'left', true);
+
+      /* Account Type */
+      drawText('ACCOUNT TYPE', 300, 372, "10px 'Arial', sans-serif", labelColor);
+      drawText((acc.accountType || 'SAVINGS').toUpperCase(), 300, 400, "bold 18px 'Georgia', serif", valueColor, 'left', true);
+
+      /* Member Since / Valid Thru */
+      drawText('MEMBER SINCE', 530, 372, "10px 'Arial', sans-serif", labelColor);
+      const since = (acc.createdAt || '2026-11').slice(0, 7);
+      drawText(since, 530, 400, "bold 18px 'Georgia', serif", valueColor, 'left', true);
+
+      /* DOB row */
+      drawText('DATE OF BIRTH', 38, 444, "10px 'Arial', sans-serif", labelColor);
+      drawText(acc.dob || '----', 38, 468, "bold 16px 'Georgia', serif", valueColor, 'left', true);
+
+      /* Status badge */
+      ctx.fillStyle = 'rgba(16,185,129,0.2)';
+      ctx.beginPath(); ctx.roundRect(530, 430, 100, 28, 8); ctx.fill();
+      ctx.strokeStyle = 'rgba(16,185,129,0.5)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(530, 430, 100, 28, 8); ctx.stroke();
+      drawText('● ACTIVE', 580, 450, "bold 11px 'Arial', sans-serif", '#4ade80', 'center');
+
+      /* Phone */
+      drawText('PHONE', 300, 444, "10px 'Arial', sans-serif", labelColor);
+      drawText(acc.phone || '—', 300, 468, "bold 16px 'Georgia', serif", valueColor, 'left', true);
+
+      /* Bottom watermark */
+      drawText('TEMPEST FEDERAL BANK  •  OFFICIAL ACCOUNT CARD  •  VERIFIED', W / 2, H - 20, "10px 'Arial', sans-serif", 'rgba(180,138,44,0.38)', 'center');
+
+      /* --- Trigger download --- */
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `card_${acc.accountNumber || 'TFB'}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    };
+
+    /* Try to draw the logo image */
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      /* Logo in top-left area, inside a subtle box */
+      const lh = 54, lw = Math.round(img.naturalWidth * (lh / img.naturalHeight));
+      ctx.save();
+      ctx.globalAlpha = 0.92;
+      ctx.drawImage(img, 36, 24, lw, lh);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      renderCard();
+    };
+    img.onerror = () => renderCard(); /* proceed without logo */
+    img.src = 'logo.jpg';
+  }
+
+  /* ========================================================================= */
+  /* 3. Forgot Account Number Handler                                          */
+  /* ========================================================================= */
+  fpCard.addEventListener('submit', async e => {
+    e.preventDefault();
+    const phoneVal = document.getElementById('fp-phone').value.trim();
+    const dobVal   = document.getElementById('fp-dob').value;
+    const st       = document.getElementById('fp-status');
+
+    if (!phoneVal || !dobVal) {
+      st.textContent = 'Enter both phone number and date of birth.';
+      st.className = 'status error';
+      return;
+    }
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/forgot`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: phoneVal, dob: dobVal })
+        });
+        const data = await res.json();
+        if (data.success) {
+          st.innerHTML = `Account Found! Your Account Number is: <b>${data.accountNumber}</b> (<a href="#" onclick="go('signin'); document.getElementById('user').value='${data.accountNumber}'; return false;">Click to Sign In</a>)`;
+          st.className = 'status success';
+          return;
+        } else {
+          st.textContent = data.error || 'No matching account found.';
+          st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage
+    const accs = getLocalAccounts();
+    const normPhone = phoneVal.replace(/\D/g, '');
+    const found = accs.find(a => a.phone.replace(/\D/g, '') === normPhone && a.dob === dobVal && a.isActive);
+    if (found) {
+      st.innerHTML = `Account Found! Your Account Number is: <b>${found.accountNumber}</b> (<a href="#" onclick="go('signin'); document.getElementById('user').value='${found.accountNumber}'; return false;">Click to Sign In</a>)`;
+      st.className = 'status success';
+    } else {
+      st.textContent = 'No active account found matching this phone number and date of birth.';
+      st.className = 'status error';
+    }
+  });
+
+  /* ========================================================================= */
+  /* 4. Dashboard Entry & Data Refresh                                         */
+  /* ========================================================================= */
+  function enterDashboard() {
+    document.getElementById('slide').style.display = 'none';
+    document.getElementById('dashboard').classList.add('active');
+    updateDashboardUI();
+    loadTransactions();
+    loadAnalytics();
+  }
+
+  function updateDashboardUI() {
+    if (!currentUser) return;
+    document.getElementById('d-user-greeting').textContent = `Welcome, ${currentUser.name.split(' ')[0]}`;
+    document.getElementById('d-acc-num').textContent = currentUser.accountNumber;
+    document.getElementById('d-acc-type').textContent = currentUser.accountType;
+    document.getElementById('d-holder-name').textContent = currentUser.name;
+    document.getElementById('d-phone').textContent = currentUser.phone;
+    renderBalance();
+
+    // Populate Settings profile fields
+    document.getElementById('u-name').value = currentUser.name;
+    document.getElementById('u-phone').value = currentUser.phone;
+    document.getElementById('u-dob').value = currentUser.dob;
+  }
+
+  function renderBalance() {
+    const el = document.getElementById('d-balance');
+    if (balanceVisible) {
+      el.textContent = '$ ' + Number(currentUser.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+      el.textContent = '$ ••••••••';
+    }
+  }
+
+  document.getElementById('toggle-bal-btn').addEventListener('click', () => {
+    balanceVisible = !balanceVisible;
+    renderBalance();
+  });
+
+  document.getElementById('btn-view-card').addEventListener('click', () => {
+    showCardModal(currentUser);
+  });
+
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    currentUser = null;
+    document.getElementById('dashboard').classList.remove('active');
+    document.getElementById('slide').style.display = 'block';
+    go('signin');
+    play();
+  });
+
+  // Tab switching
+  function switchTab(targetName) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === targetName));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${targetName}`));
+    if (targetName === 'analytics') loadAnalytics();
+    if (targetName === 'history') loadTransactions();
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+  /* ========================================================================= */
+  /* 5. Deposit Handler                                                        */
+  /* ========================================================================= */
+  document.getElementById('form-deposit').addEventListener('submit', async e => {
+    e.preventDefault();
+    const amt = parseFloat(document.getElementById('dep-amount').value);
+    const pin = document.getElementById('dep-pin').value;
+    const st  = document.getElementById('dep-status');
+    st.textContent = 'Processing deposit...'; st.className = 'status';
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/deposit`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountNumber: currentUser.accountNumber, pin: pin, amount: amt })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser.balance = data.receipt.updatedBalance;
+          renderBalance();
+          document.getElementById('form-deposit').reset();
+          st.textContent = 'Deposit successful!'; st.className = 'status success';
+          showReceiptModal(data.receipt);
+          loadTransactions();
+          return;
+        } else {
+          st.textContent = data.error || 'Deposit failed.'; st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage logic
+    if (pin !== currentUser.pin) {
+      st.textContent = 'Security authorization failed: Incorrect PIN.';
+      st.className = 'status error';
+      return;
+    }
+    currentUser.balance += amt;
+    const accs = getLocalAccounts();
+    const idx = accs.findIndex(a => a.accountNumber === currentUser.accountNumber);
+    if (idx !== -1) accs[idx].balance = currentUser.balance;
+    saveLocalAccounts(accs);
+
+    const txn = {
+      transactionId: 'TXN' + Date.now().toString().slice(-8),
+      accountNumber: currentUser.accountNumber,
+      type: 'DEPOSIT',
+      amount: amt,
+      updatedBalance: currentUser.balance,
+      timestamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    };
+    const txns = getLocalTransactions();
+    txns.push(txn);
+    saveLocalTransactions(txns);
+
+    renderBalance();
+    document.getElementById('form-deposit').reset();
+    st.textContent = 'Deposit completed successfully!'; st.className = 'status success';
+    showReceiptModal(txn);
+    loadTransactions();
+  });
+
+  /* ========================================================================= */
+  /* 6. Withdrawal Handler                                                     */
+  /* ========================================================================= */
+  document.getElementById('form-withdraw').addEventListener('submit', async e => {
+    e.preventDefault();
+    const amt = parseFloat(document.getElementById('wth-amount').value);
+    const pin = document.getElementById('wth-pin').value;
+    const st  = document.getElementById('wth-status');
+    st.textContent = 'Processing withdrawal...'; st.className = 'status';
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/withdraw`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountNumber: currentUser.accountNumber, pin: pin, amount: amt })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser.balance = data.receipt.updatedBalance;
+          renderBalance();
+          document.getElementById('form-withdraw').reset();
+          st.textContent = 'Withdrawal authorized!'; st.className = 'status success';
+          showReceiptModal(data.receipt);
+          loadTransactions();
+          return;
+        } else {
+          st.textContent = data.error || 'Withdrawal failed.'; st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage logic
+    if (pin !== currentUser.pin) {
+      st.textContent = 'Incorrect PIN.'; st.className = 'status error';
+      return;
+    }
+    if (currentUser.balance < amt) {
+      st.textContent = `Insufficient balance. Available: $${currentUser.balance.toFixed(2)}`;
+      st.className = 'status error';
+      return;
+    }
+
+    currentUser.balance -= amt;
+    const accs = getLocalAccounts();
+    const idx = accs.findIndex(a => a.accountNumber === currentUser.accountNumber);
+    if (idx !== -1) accs[idx].balance = currentUser.balance;
+    saveLocalAccounts(accs);
+
+    const txn = {
+      transactionId: 'TXN' + Date.now().toString().slice(-8),
+      accountNumber: currentUser.accountNumber,
+      type: 'WITHDRAWAL',
+      amount: amt,
+      updatedBalance: currentUser.balance,
+      timestamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    };
+    const txns = getLocalTransactions();
+    txns.push(txn);
+    saveLocalTransactions(txns);
+
+    renderBalance();
+    document.getElementById('form-withdraw').reset();
+    st.textContent = 'Withdrawal completed successfully!'; st.className = 'status success';
+    showReceiptModal(txn);
+    loadTransactions();
+  });
+
+  /* ========================================================================= */
+  /* 7. Transfer Money Handler (With Receiver Name Display Confirmation)       */
+  /* ========================================================================= */
+  let pendingTransfer = null;
+
+  document.getElementById('form-transfer-step1').addEventListener('submit', async e => {
+    e.preventDefault();
+    const targetAcc = document.getElementById('trn-dest').value.trim();
+    const amt       = parseFloat(document.getElementById('trn-amount').value);
+    const pin       = document.getElementById('trn-pin').value;
+    const st        = document.getElementById('trn-status');
+    st.textContent = 'Verifying destination...'; st.className = 'status';
+
+    if (targetAcc === currentUser.accountNumber) {
+      st.textContent = 'Cannot transfer money to your own account.'; st.className = 'status error';
+      return;
+    }
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/transfer-preview`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceAccount: currentUser.accountNumber, pin: pin, targetAccount: targetAcc })
+        });
+        const data = await res.json();
+        if (data.success) {
+          pendingTransfer = { targetAcc: targetAcc, targetName: data.targetName, amount: amt, pin: pin };
+          openTransferConfirmModal(data.targetName, targetAcc, amt);
+          st.textContent = '';
+          return;
+        } else {
+          st.textContent = data.error || 'Destination account invalid.'; st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage logic
+    if (pin !== currentUser.pin) {
+      st.textContent = 'Incorrect PIN.'; st.className = 'status error';
+      return;
+    }
+    if (currentUser.balance < amt) {
+      st.textContent = `Insufficient funds! Available balance: $${currentUser.balance.toFixed(2)}`;
+      st.className = 'status error';
+      return;
+    }
+
+    const accs = getLocalAccounts();
+    const dest = accs.find(a => a.accountNumber === targetAcc && a.isActive);
+    if (!dest) {
+      st.textContent = 'Destination account does not exist or is closed.';
+      st.className = 'status error';
+      return;
+    }
+
+    pendingTransfer = { targetAcc: targetAcc, targetName: dest.name, amount: amt, pin: pin };
+    openTransferConfirmModal(dest.name, targetAcc, amt);
+    st.textContent = '';
+  });
+
+  function openTransferConfirmModal(receiverName, receiverAcc, amount) {
+    document.getElementById('tc-name').textContent = receiverName;
+    document.getElementById('tc-acc').textContent = receiverAcc;
+    document.getElementById('tc-amt').textContent = '$ ' + amount.toFixed(2);
+    document.getElementById('transfer-confirm-modal').classList.add('open');
+  }
+
+  document.getElementById('btn-execute-transfer').addEventListener('click', async () => {
+    if (!pendingTransfer) return;
+    document.getElementById('transfer-confirm-modal').classList.remove('open');
+    const st = document.getElementById('trn-status');
+    st.textContent = 'Executing transfer...'; st.className = 'status';
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/transfer-confirm`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourceAccount: currentUser.accountNumber,
+            pin: pendingTransfer.pin,
+            targetAccount: pendingTransfer.targetAcc,
+            amount: pendingTransfer.amount
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser.balance = data.receipt.updatedBalance;
+          renderBalance();
+          document.getElementById('form-transfer-step1').reset();
+          st.textContent = 'Transfer completed!'; st.className = 'status success';
+          showReceiptModal(data.receipt);
+          loadTransactions();
+          pendingTransfer = null;
+          return;
+        } else {
+          st.textContent = data.error || 'Transfer failed.'; st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage logic
+    currentUser.balance -= pendingTransfer.amount;
+    const accs = getLocalAccounts();
+    const srcIdx = accs.findIndex(a => a.accountNumber === currentUser.accountNumber);
+    const destIdx = accs.findIndex(a => a.accountNumber === pendingTransfer.targetAcc);
+    if (srcIdx !== -1) accs[srcIdx].balance = currentUser.balance;
+    if (destIdx !== -1) accs[destIdx].balance += pendingTransfer.amount;
+    saveLocalAccounts(accs);
+
+    const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const txnSender = {
+      transactionId: 'TXN' + Date.now().toString().slice(-8),
+      accountNumber: currentUser.accountNumber,
+      type: 'TRANSFER_SENT',
+      amount: pendingTransfer.amount,
+      updatedBalance: currentUser.balance,
+      targetAccount: pendingTransfer.targetAcc,
+      targetName: pendingTransfer.targetName,
+      timestamp: nowStr
+    };
+    const txnReceiver = {
+      transactionId: 'TXN' + (Date.now() + 1).toString().slice(-8),
+      accountNumber: pendingTransfer.targetAcc,
+      type: 'TRANSFER_RECV',
+      amount: pendingTransfer.amount,
+      updatedBalance: accs[destIdx].balance,
+      targetAccount: currentUser.accountNumber,
+      targetName: currentUser.name,
+      timestamp: nowStr
+    };
+    const txns = getLocalTransactions();
+    txns.push(txnSender, txnReceiver);
+    saveLocalTransactions(txns);
+
+    renderBalance();
+    document.getElementById('form-transfer-step1').reset();
+    st.textContent = 'Transfer completed successfully!'; st.className = 'status success';
+    showReceiptModal(txnSender);
+    loadTransactions();
+    pendingTransfer = null;
+  });
+
+  /* ========================================================================= */
+  /* 8. Transaction Receipt Modal & Download                                   */
+  /* ========================================================================= */
+  let activeReceipt = null;
+
+  function showReceiptModal(txn) {
+    activeReceipt = txn;
+    document.getElementById('rcpt-id').textContent = txn.transactionId;
+    document.getElementById('rcpt-time').textContent = txn.timestamp;
+    document.getElementById('rcpt-acc').textContent = txn.accountNumber;
+    
+    const typeEl = document.getElementById('rcpt-type');
+    typeEl.textContent = txn.type;
+    typeEl.className = 'badge-type ' + (txn.type.includes('DEPOSIT') ? 'badge-deposit' : txn.type.includes('WITHDRAWAL') ? 'badge-withdrawal' : 'badge-transfer');
+
+    const targetRow = document.getElementById('rcpt-target-row');
+    if (txn.targetAccount) {
+      targetRow.style.display = 'flex';
+      document.getElementById('rcpt-target').textContent = `${txn.targetName || ''} (${txn.targetAccount})`;
+    } else {
+      targetRow.style.display = 'none';
+    }
+
+    document.getElementById('rcpt-amount').textContent = '$ ' + Number(txn.amount).toFixed(2);
+    document.getElementById('rcpt-balance').textContent = '$ ' + Number(txn.updatedBalance).toFixed(2);
+
+    /* --- Balance History computation --- */
+    const closingBal = Number(txn.updatedBalance);
+    const amt = Number(txn.amount);
+    let prevBal, effectSign, effectColor;
+    if (txn.type === 'DEPOSIT' || txn.type === 'TRANSFER_RECV') {
+      prevBal = closingBal - amt;
+      effectSign = '+';
+      effectColor = '#1b8a4f';
+    } else {
+      // WITHDRAWAL or TRANSFER_SENT
+      prevBal = closingBal + amt;
+      effectSign = '-';
+      effectColor = '#b3261e';
+    }
+    document.getElementById('rcpt-prev-balance').textContent = '$ ' + prevBal.toFixed(2);
+    const effectEl = document.getElementById('rcpt-effect');
+    effectEl.textContent = `${effectSign}$ ${amt.toFixed(2)}`;
+    effectEl.style.color = effectColor;
+    document.getElementById('rcpt-closing').textContent = '$ ' + closingBal.toFixed(2);
+
+    document.getElementById('receipt-modal').classList.add('open');
+  }
+
+  document.getElementById('btn-download-receipt').addEventListener('click', () => {
+    if (!activeReceipt) return;
+    const closingBal = Number(activeReceipt.updatedBalance);
+    const amt = Number(activeReceipt.amount);
+    const isCredit = activeReceipt.type === 'DEPOSIT' || activeReceipt.type === 'TRANSFER_RECV';
+    const prevBal = isCredit ? closingBal - amt : closingBal + amt;
+    const effectSign = isCredit ? '+' : '-';
+
+    const text = `====================================================================
+                     TEMPEST FEDERAL BANK                           
+                  OFFICIAL TRANSACTION RECEIPT                       
+====================================================================
+  TRANSACTION ID : ${activeReceipt.transactionId}
+  DATE & TIME    : ${activeReceipt.timestamp}
+  ACCOUNT NUMBER : ${activeReceipt.accountNumber}
+  ACCOUNT HOLDER : ${currentUser ? currentUser.name : 'Customer'}
+  TYPE           : ${activeReceipt.type}
+  AMOUNT         : $ ${amt.toFixed(2)}
+  ${activeReceipt.targetAccount ? `TARGET ACCOUNT : ${activeReceipt.targetAccount}\n  TARGET NAME    : ${activeReceipt.targetName || ''}` : ''}
+--------------------------------------------------------------------
+  BALANCE HISTORY
+--------------------------------------------------------------------
+  Opening Balance  : $ ${prevBal.toFixed(2)}
+  Transaction      : ${effectSign}$ ${amt.toFixed(2)}  (${activeReceipt.type})
+  Closing Balance  : $ ${closingBal.toFixed(2)}
+====================================================================
+   Status: SUCCESSFUL - VERIFIED BY TEMPEST FEDERAL BANK CORE       
+   Thank you for banking with Tempest Federal Bank.                 
+====================================================================`;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipt_${activeReceipt.transactionId}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  /* ========================================================================= */
+  /* 9. Transaction History & Search                                           */
+  /* ========================================================================= */
+  async function loadTransactions() {
+    if (!currentUser) return;
+    const qId   = document.getElementById('sh-id').value.trim();
+    const qDate = document.getElementById('sh-date').value;
+    const qType = document.getElementById('sh-type').value;
+
+    let txns = [];
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/search`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accountNumber: currentUser.accountNumber,
+            pin: currentUser.pin,
+            transactionId: qId,
+            date: qDate,
+            type: qType
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          txns = data.transactions;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    if (!serverOnline) {
+      const allTxns = getLocalTransactions().filter(t => t.accountNumber === currentUser.accountNumber);
+      txns = allTxns.filter(t => {
+        let match = true;
+        if (qId && !t.transactionId.includes(qId)) match = false;
+        if (match && qDate && !t.timestamp.includes(qDate)) match = false;
+        if (match && qType !== 'ALL' && !t.type.includes(qType)) match = false;
+        return match;
+      });
+    }
+
+    const tbody = document.getElementById('txns-table-body');
+    if (!txns || txns.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888; padding:2rem;">No matching transactions found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = txns.slice().reverse().map(t => {
+      const cls = t.type.includes('DEPOSIT') ? 'badge-deposit' : t.type.includes('WITHDRAWAL') ? 'badge-withdrawal' : 'badge-transfer';
+      const detail = t.targetAccount ? `${t.type === 'TRANSFER_SENT' ? 'To: ' : 'From: '}${t.targetName || t.targetAccount}` : 'Self Account';
+      const tJson = JSON.stringify(t).replace(/"/g, '&quot;');
+      return `<tr>
+        <td style="font-family:monospace; font-weight:600;">${t.transactionId}</td>
+        <td style="color:#64748b; font-size:0.88rem;">${t.timestamp}</td>
+        <td><span class="badge-type ${cls}">${t.type}</span></td>
+        <td style="font-size:0.9rem;">${detail}</td>
+        <td style="font-weight:700; color:var(--navy);">$ ${Number(t.amount).toFixed(2)}</td>
+        <td style="font-weight:600; color:#475569;">$ ${Number(t.updatedBalance).toFixed(2)}</td>
+        <td><button class="btn-act" style="color:var(--navy); background:#f1f5f9; border-color:#cbd5e1; padding:4px 10px; font-size:0.8rem;" onclick='showReceiptModal(${tJson})'>Advice</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('btn-filter').addEventListener('click', loadTransactions);
+
+  /* ========================================================================= */
+  /* 10. Transaction Analytics & Simple Interactive Chart                      */
+  /* ========================================================================= */
+  async function loadAnalytics() {
+    if (!currentUser) return;
+    let summary = { totalDeposited: 0, totalWithdrawn: 0, totalTransferred: 0, depositCount: 0, withdrawCount: 0, transferCount: 0 };
+    let monthly = [];
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/analytics`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountNumber: currentUser.accountNumber, pin: currentUser.pin })
+        });
+        const data = await res.json();
+        if (data.success) {
+          summary = data.summary;
+          monthly = data.monthly;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    if (!serverOnline) {
+      const txns = getLocalTransactions().filter(t => t.accountNumber === currentUser.accountNumber);
+      const mObj = {};
+      txns.forEach(t => {
+        const mKey = t.timestamp.slice(0, 7);
+        if (!mObj[mKey]) mObj[mKey] = { month: mKey, deposited: 0, withdrawn: 0, transferred: 0, count: 0 };
+        mObj[mKey].count++;
+
+        if (t.type === 'DEPOSIT' || t.type === 'TRANSFER_RECV') {
+          summary.totalDeposited += t.amount;
+          summary.depositCount++;
+          mObj[mKey].deposited += t.amount;
+        } else if (t.type === 'WITHDRAWAL') {
+          summary.totalWithdrawn += t.amount;
+          summary.withdrawCount++;
+          mObj[mKey].withdrawn += t.amount;
+        } else if (t.type === 'TRANSFER_SENT') {
+          summary.totalTransferred += t.amount;
+          summary.transferCount++;
+          mObj[mKey].transferred += t.amount;
+        }
+      });
+      monthly = Object.values(mObj);
+    }
+
+    // Populate Stat Metric Cards
+    document.getElementById('an-deposited').textContent = '$ ' + summary.totalDeposited.toFixed(2);
+    document.getElementById('an-dep-count').textContent = `${summary.depositCount} deposits`;
+    document.getElementById('an-withdrawn').textContent = '$ ' + summary.totalWithdrawn.toFixed(2);
+    document.getElementById('an-with-count').textContent = `${summary.withdrawCount} withdrawals`;
+    document.getElementById('an-transferred').textContent = '$ ' + summary.totalTransferred.toFixed(2);
+    document.getElementById('an-trn-count').textContent = `${summary.transferCount} transfers`;
+    document.getElementById('an-net').textContent = '$ ' + (summary.totalDeposited - summary.totalWithdrawn - summary.totalTransferred).toFixed(2);
+
+    // Render Luxury Visual Bar/Column Chart in SVG
+    renderAnalyticsChart(summary, monthly);
+  }
+
+  function renderAnalyticsChart(summary, monthly) {
+    const svg = document.getElementById('analytics-svg');
+    const maxVal = Math.max(summary.totalDeposited, summary.totalWithdrawn, summary.totalTransferred, 100);
+
+    const depH = (summary.totalDeposited / maxVal) * 140;
+    const wthH = (summary.totalWithdrawn / maxVal) * 140;
+    const trnH = (summary.totalTransferred / maxVal) * 140;
+
+    svg.innerHTML = `
+      <!-- Grid lines -->
+      <line x1="40" y1="30" x2="660" y2="30" stroke="#e2e8f0" stroke-dasharray="4"/>
+      <line x1="40" y1="100" x2="660" y2="100" stroke="#e2e8f0" stroke-dasharray="4"/>
+      <line x1="40" y1="170" x2="660" y2="170" stroke="#cbd5e1" stroke-width="2"/>
+
+      <!-- Bars -->
+      <!-- Deposit Bar -->
+      <rect x="120" y="${170 - depH}" width="80" height="${depH}" rx="6" fill="#10b981"/>
+      <text x="160" y="${160 - depH}" text-anchor="middle" font-size="12" font-weight="700" fill="#065f46">$${summary.totalDeposited.toFixed(0)}</text>
+      <text x="160" y="194" text-anchor="middle" font-size="13" font-weight="600" fill="#334155">Deposits</text>
+
+      <!-- Withdrawal Bar -->
+      <rect x="300" y="${170 - wthH}" width="80" height="${wthH}" rx="6" fill="#ef4444"/>
+      <text x="340" y="${160 - wthH}" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b">$${summary.totalWithdrawn.toFixed(0)}</text>
+      <text x="340" y="194" text-anchor="middle" font-size="13" font-weight="600" fill="#334155">Withdrawals</text>
+
+      <!-- Transfer Bar -->
+      <rect x="480" y="${170 - trnH}" width="80" height="${trnH}" rx="6" fill="#3b82f6"/>
+      <text x="520" y="${160 - trnH}" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">$${summary.totalTransferred.toFixed(0)}</text>
+      <text x="520" y="194" text-anchor="middle" font-size="13" font-weight="600" fill="#334155">Transfers</text>
+
+      <!-- Axis Labels -->
+      <text x="35" y="35" text-anchor="end" font-size="10" fill="#94a3b8">$${maxVal.toFixed(0)}</text>
+      <text x="35" y="105" text-anchor="end" font-size="10" fill="#94a3b8">$${(maxVal/2).toFixed(0)}</text>
+      <text x="35" y="174" text-anchor="end" font-size="10" fill="#94a3b8">$0</text>
+    `;
+  }
+
+  /* ========================================================================= */
+  /* 11. Profile Update, PIN Change, Account Deletion                          */
+  /* ========================================================================= */
+  document.getElementById('form-update-profile').addEventListener('submit', async e => {
+    e.preventDefault();
+    const newName = document.getElementById('u-name').value.trim();
+    const newPhone = document.getElementById('u-phone').value.trim();
+    const newDob = document.getElementById('u-dob').value;
+    const pin = document.getElementById('u-pin').value;
+    const st = document.getElementById('u-status');
+    st.textContent = 'Saving details...'; st.className = 'status';
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/update-details`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accountNumber: currentUser.accountNumber,
+            pin: pin, name: newName, phone: newPhone, dob: newDob
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser = Object.assign(currentUser, data.account);
+          updateDashboardUI();
+          st.textContent = 'Personal details updated successfully!'; st.className = 'status success';
+          return;
+        } else {
+          st.textContent = data.error || 'Update failed.'; st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage logic
+    if (pin !== currentUser.pin) {
+      st.textContent = 'Incorrect PIN.'; st.className = 'status error';
+      return;
+    }
+    const accs = getLocalAccounts();
+    const phoneTaken = accs.some(a => a.phone.replace(/\D/g, '') === newPhone.replace(/\D/g, '') && a.accountNumber !== currentUser.accountNumber && a.isActive);
+    if (phoneTaken) {
+      st.textContent = 'Phone number is already registered to another account.';
+      st.className = 'status error';
+      return;
+    }
+
+    currentUser.name = newName;
+    currentUser.phone = newPhone;
+    currentUser.dob = newDob;
+    const idx = accs.findIndex(a => a.accountNumber === currentUser.accountNumber);
+    if (idx !== -1) accs[idx] = currentUser;
+    saveLocalAccounts(accs);
+
+    updateDashboardUI();
+    st.textContent = 'Personal details updated successfully!'; st.className = 'status success';
+  });
+
+  document.getElementById('form-change-pin').addEventListener('submit', async e => {
+    e.preventDefault();
+    const oldP = document.getElementById('pin-old').value;
+    const p1 = document.getElementById('pin-new1').value;
+    const p2 = document.getElementById('pin-new2').value;
+    const st = document.getElementById('pin-status');
+    st.textContent = 'Verifying PIN...'; st.className = 'status';
+
+    if (p1.length !== 4 || p1 !== p2) {
+      st.textContent = 'New PIN must be 4 digits and match confirmation entered twice.';
+      st.className = 'status error';
+      return;
+    }
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/change-pin`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accountNumber: currentUser.accountNumber,
+            oldPin: oldP, newPin1: p1, newPin2: p2
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser.pin = p1;
+          document.getElementById('form-change-pin').reset();
+          st.textContent = 'Security PIN updated successfully!'; st.className = 'status success';
+          return;
+        } else {
+          st.textContent = data.error || 'PIN change failed.'; st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage logic
+    if (oldP !== currentUser.pin) {
+      st.textContent = 'Current PIN is incorrect.'; st.className = 'status error';
+      return;
+    }
+    currentUser.pin = p1;
+    const accs = getLocalAccounts();
+    const idx = accs.findIndex(a => a.accountNumber === currentUser.accountNumber);
+    if (idx !== -1) accs[idx].pin = p1;
+    saveLocalAccounts(accs);
+
+    document.getElementById('form-change-pin').reset();
+    st.textContent = '4-Digit PIN updated successfully!'; st.className = 'status success';
+  });
+
+  document.getElementById('form-delete-acc').addEventListener('submit', async e => {
+    e.preventDefault();
+    const phone = document.getElementById('del-phone').value.trim();
+    const pin = document.getElementById('del-pin').value;
+    const st = document.getElementById('del-status');
+
+    if (!confirm(`Are you absolutely sure you want to permanently delete and close account ${currentUser.accountNumber}? This cannot be undone.`)) {
+      return;
+    }
+
+    st.textContent = 'Closing account...'; st.className = 'status';
+
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${API_BASE}/api/delete-account`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accountNumber: currentUser.accountNumber, phone: phone, pin: pin
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Your Tempest Federal Bank account has been permanently closed.');
+          location.reload();
+          return;
+        } else {
+          st.textContent = data.error || 'Deletion failed.'; st.className = 'status error';
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to local storage:', err);
+      }
+    }
+
+    // Local Storage logic
+    const normPhone = phone.replace(/\D/g, '');
+    const currentNorm = currentUser.phone.replace(/\D/g, '');
+    if (normPhone !== currentNorm) {
+      st.textContent = 'Phone number does not match registered account records.';
+      st.className = 'status error';
+      return;
+    }
+    if (pin !== currentUser.pin) {
+      st.textContent = 'Incorrect security PIN.';
+      st.className = 'status error';
+      return;
+    }
+
+    const accs = getLocalAccounts();
+    const idx = accs.findIndex(a => a.accountNumber === currentUser.accountNumber);
+    if (idx !== -1) accs[idx].isActive = 0;
+    saveLocalAccounts(accs);
+
+    alert('Your Tempest Federal Bank account has been permanently closed.');
+    location.reload();
+  });
+</script>
+</body>
+</html>
+

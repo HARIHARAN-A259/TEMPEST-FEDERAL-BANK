@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tempest Federal Bank</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=EB+Garamond:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold-1: #dcb95f;
+    --gold-2: #b48a2c;
+    --gold-3: #7d5a12;
+    --ease: cubic-bezier(.65, 0, .25, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #fff; }
+
+  .slide { position: relative; height: 100%; overflow-x: hidden; overflow-y: auto; background: #ffffff; }
+
+  /* Brand block: starts centred, later glides up */
+  .brand {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(1.5rem, 5.4vw, 3.8rem);
+    line-height: 1.3;
+    z-index: 2;
+    cursor: pointer;
+    transition: top 1.6s var(--ease);
+  }
+  .brand.up { top: calc(11% + env(safe-area-inset-top, 0px)); }
+
+  /* Mark: dot -> vertical line */
+  .mark {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--gold-1), var(--gold-2) 60%, var(--gold-3));
+    box-shadow: 0 0 16px 2px rgba(180, 138, 44, .45);
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform .8s var(--ease), width 1s var(--ease), height 1s var(--ease),
+                border-radius 1s var(--ease), opacity .9s ease;
+  }
+  .brand.dot  .mark { transform: translate(-50%, -50%) scale(1); }
+  .brand.line .mark { width: 3px; height: var(--h, 64px); border-radius: 3px; }
+  .brand.open .mark { opacity: 0; }
+
+  /* Name: gold, revealed outward from the centre line */
+  .name {
+    font-family: "Cinzel", "Times New Roman", serif;
+    font-weight: 600;
+    font-size: 1em;
+    line-height: 1.3;
+    letter-spacing: .08em;
+    white-space: nowrap;
+    padding: 0 .1em;
+    background: linear-gradient(180deg, var(--gold-1) 0%, var(--gold-2) 50%, var(--gold-3) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    clip-path: inset(0 50% 0 50%);
+    transition: clip-path 1.5s var(--ease);
+  }
+  .brand.open .name { clip-path: inset(-10% 0 -10% 0); }
+
+  /* Logo: sits at the left of the name, same height as the text line.
+     Its slot opens from 0 width, so the name slides smoothly to make room. */
+  .logo-slot {
+    flex: none;
+    width: 0;
+    height: 1.3em;
+    margin-right: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: width 1.2s var(--ease), margin-right 1.2s var(--ease), opacity 1.2s ease;
+  }
+  .logo-slot img { height: 100%; width: auto; display: block; mix-blend-mode: multiply; }
+  .brand.logo-in .logo-slot { width: calc(1.3em * 1.835); margin-right: .35em; opacity: 1; }
+
+
+  /* Sign-in card: appears after the logo has joined the name */
+  .card {
+    --navy: #1a5499; --ink: #232b38; --muted: #5b6470; --line: #cfd6de;
+    position: absolute;
+    left: 50%; top: max(23vh, 150px);
+    width: min(92vw, 440px);
+    margin-bottom: 2rem;
+    --pad: clamp(1.4rem, 5vw, 2.4rem);
+    padding: var(--pad);
+    background: #fff;
+    border: 1px solid #e3e8ef;
+    border-radius: 18px;
+    box-shadow: 0 12px 40px rgba(20, 50, 100, .10);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    opacity: 0; visibility: hidden;
+    transform: translate(-50%, 24px);
+    transition: opacity 1s ease, transform 1s var(--ease), visibility 0s linear 1s;
+  }
+  .card.in { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition-delay: 0s; }
+  .card h2 { font-size: clamp(1.35rem, 4.6vw, 1.75rem); font-weight: 600; text-align: center; margin-bottom: 1.6rem; }
+  .field { margin-bottom: 1.1rem; }
+  .field label { display: block; margin-bottom: .45rem; color: var(--muted); font-size: 1rem; }
+  .control { position: relative; }
+  .control input {
+    width: 100%; height: 3.4rem;
+    padding: 0 1rem;
+    font: inherit; font-size: 1.05rem; color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line); border-radius: 10px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .control input:focus-visible { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(26, 84, 153, .18); }
+  .control.pw input { padding-right: 4.6rem; }
+  .field.bad input { border-color: #b3261e; }
+  .error { min-height: 1.2em; margin-top: .3rem; font-size: .85rem; color: #b3261e; }
+  .show {
+    position: absolute; right: .6rem; top: 50%; transform: translateY(-50%);
+    padding: .4rem .5rem;
+    font: inherit; font-style: italic; color: #7a828d;
+    background: none; border: 0; border-radius: 6px; cursor: pointer;
+  }
+  .show:hover { color: var(--navy); }
+  .show:focus-visible, .link:focus-visible, .submit:focus-visible { outline: 3px solid rgba(26, 84, 153, .35); outline-offset: 2px; }
+  .row { display: flex; justify-content: flex-end; margin: .2rem 0 1.4rem; }
+  .link { font: inherit; font-weight: 600; color: #0f3763; background: none; border: 0; padding: .2rem 0; cursor: pointer; text-decoration: none; }
+  .link:hover { text-decoration: underline; }
+  .submit {
+    width: 100%; height: 3.4rem;
+    font: inherit; font-size: 1.1rem; font-weight: 600; color: #fff;
+    background: var(--navy); border: 0; border-radius: 10px; cursor: pointer;
+    transition: background .2s;
+  }
+  .submit:hover { background: #154682; }
+  .status { min-height: 1.3em; margin-top: .8rem; text-align: center; font-size: .92rem; color: var(--navy); }
+  .foot { margin-top: .6rem; text-align: center; color: var(--muted); }
+
+
+  /* Register card (same slot as the sign-in card; the two swap places) */
+  .card:not(.in) { pointer-events: none; }
+  .card.reg { width: min(94vw, 580px); }
+  .card.reg h2 { font-family: "EB Garamond", Georgia, "Times New Roman", serif; font-weight: 700; font-size: clamp(1.8rem, 6vw, 2.6rem); color: #14284b; margin-bottom: .5rem; }
+  .card.reg .lead { text-align: center; font-size: .95rem; color: #2f3a4a; margin-bottom: 1.5rem; }
+  .card.reg .field { margin-bottom: .5rem; }
+  .card.reg .field label { font-size: .9rem; font-weight: 600; color: #2a3340; margin-bottom: .35rem; }
+  .card.reg .control input, .card.reg select {
+    width: 100%; height: 3rem; padding: 0 .9rem;
+    font: inherit; font-size: 1rem; color: var(--ink);
+    background: #eef1f5; border: 1px solid #dde3ea; border-radius: 8px; outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .card.reg select {
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8' fill='none' stroke='%23666' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M1 1l6 6 6-6'/></svg>");
+    background-repeat: no-repeat; background-position: right .9rem center; padding-right: 2.4rem;
+  }
+  .card.reg input:focus-visible, .card.reg select:focus-visible { border-color: #14284b; box-shadow: 0 0 0 3px rgba(20, 40, 75, .15); }
+  .card.reg .field.bad input, .card.reg .field.bad select { border-color: #b3261e; }
+  .card.reg .control.pw input { padding-right: 2.8rem; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.1rem; }
+  @media (max-width: 480px) { .two { grid-template-columns: 1fr; } }
+  .eye {
+    position: absolute; right: .35rem; top: 50%; transform: translateY(-50%);
+    width: 2.2rem; height: 2.2rem; display: grid; place-items: center;
+    color: #7a828d; background: none; border: 0; border-radius: 6px; cursor: pointer;
+  }
+  .eye:hover { color: #14284b; }
+  .eye:focus-visible { outline: 3px solid rgba(20, 40, 75, .3); }
+  .eye svg { width: 1.2rem; height: 1.2rem; }
+  .card.reg .submit { margin-top: .9rem; background: #0b2f63; }
+  .card.reg .submit:hover { background: #092550; }
+  .card.reg .foot { margin-top: 1rem; }
+
+
+  /* Forgot-password card */
+  .card.fp { width: min(92vw, 480px); }
+  .fp-head {
+    margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) 1.6rem;
+    padding: 1.5rem 1rem 1.3rem;
+    text-align: center;
+    border-bottom: 1px solid #e8ecf1;
+    font-family: "Cinzel", "Times New Roman", serif;
+    line-height: 1.15;
+    background: linear-gradient(180deg, #c9a24a 0%, #a67c1f 60%, #7d5a12 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .fp-head b { display: block; font-size: clamp(1.7rem, 7vw, 2.3rem); font-weight: 600; letter-spacing: .06em; }
+  .fp-head span { display: block; font-size: clamp(1rem, 4vw, 1.3rem); font-weight: 500; letter-spacing: .05em; }
+  .card.fp h2 { font-size: clamp(1.5rem, 5.6vw, 2.1rem); font-weight: 700; color: #0f2147; margin-bottom: .7rem; }
+  .card.fp .lead { text-align: center; font-size: .98rem; line-height: 1.55; color: #2f3a4a; margin-bottom: 1.5rem; }
+  .card.fp .control input { background: #f1f3f6; border: 1px solid #dde3ea; border-radius: 8px; }
+  .card.fp .control input:focus-visible { border-color: #0b3d7a; box-shadow: 0 0 0 3px rgba(11, 61, 122, .16); }
+  .card.fp .field.bad input { border-color: #b3261e; }
+  .card.fp .submit { background: #0a4388; border-radius: 8px; margin-top: .4rem; }
+  .card.fp .submit:hover { background: #083668; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand, .mark, .name, .logo-slot, .card { transition-duration: .01s !important; }
+  }
+</style>
+</head>
+<body>
+  <main class="slide" id="slide">
+    <div class="brand" id="brand">
+      <span class="logo-slot"><img alt="Tempest Federal Bank logo" src="logo.jpg"></span>
+      <span class="mark" id="mark"></span>
+      <h1 class="name" id="name">Tempest Federal Bank</h1>
+    </div>
+
+    <form class="card" id="card" novalidate aria-labelledby="signin-title">
+      <h2 id="signin-title">Sign in to your account</h2>
+
+      <div class="field" id="f-user">
+        <label for="user">Account number or phone</label>
+        <div class="control"><input id="user" name="user" type="text" autocomplete="username" inputmode="text"></div>
+        <div class="error" id="e-user" aria-live="polite"></div>
+      </div>
+
+      <div class="field" id="f-pass">
+        <label for="pass">Password</label>
+        <div class="control pw">
+          <input id="pass" name="pass" type="password" autocomplete="current-password">
+          <button type="button" class="show" id="show" aria-controls="pass" aria-pressed="false">Show</button>
+        </div>
+        <div class="error" id="e-pass" aria-live="polite"></div>
+      </div>
+
+      <div class="row"><button type="button" class="link" id="forgot">Forgot Password?</button></div>
+      <button type="submit" class="submit">Sign In</button>
+      <p class="status" id="status" role="status"></p>
+      <p class="foot">New user? <button type="button" class="link" id="register">Register</button></p>
+    </form>
+
+    <form class="card reg" id="reg" novalidate aria-labelledby="reg-title">
+      <h2 id="reg-title">Create Your Account</h2>
+      <p class="lead">Welcome to Tempest Federal. Sign up below to access secure banking services.</p>
+
+      <div class="field"><label for="r-name">Full Name</label>
+        <div class="control"><input id="r-name" type="text" placeholder="John Doe" autocomplete="name"></div><div class="error" aria-live="polite"></div></div>
+
+      <div class="field"><label for="r-email">Email Address</label>
+        <div class="control"><input id="r-email" type="email" placeholder="name@example.com" autocomplete="email"></div><div class="error" aria-live="polite"></div></div>
+
+      <div class="two">
+        <div class="field"><label for="r-phone">Phone Number</label>
+          <div class="control"><input id="r-phone" type="tel" placeholder="+1-555-123-4567" autocomplete="tel"></div><div class="error" aria-live="polite"></div></div>
+        <div class="field"><label for="r-dob">Date of Birth</label>
+          <div class="control"><input id="r-dob" type="date" autocomplete="bday"></div><div class="error" aria-live="polite"></div></div>
+      </div>
+
+      <div class="field"><label for="r-type">Account Type</label>
+        <div class="control"><select id="r-type">
+          <option value="">Select Account Type...</option>
+          <option>Savings Account</option>
+          <option>Current Account</option>
+        </select></div><div class="error" aria-live="polite"></div></div>
+
+      <div class="two">
+        <div class="field"><label for="r-pass">Create Password</label>
+          <div class="control pw"><input id="r-pass" type="password" autocomplete="new-password"><button type="button" class="eye" data-target="r-pass" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div><div class="error" aria-live="polite"></div></div>
+        <div class="field"><label for="r-pass2">Confirm Password</label>
+          <div class="control pw"><input id="r-pass2" type="password" autocomplete="new-password"><button type="button" class="eye" data-target="r-pass2" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div><div class="error" aria-live="polite"></div></div>
+      </div>
+
+      <button type="submit" class="submit">Register Account</button>
+      <p class="status" id="r-status" role="status"></p>
+      <p class="foot">Already a user? <button type="button" class="link" id="to-signin">Sign In</button></p>
+    </form>
+
+    <form class="card fp" id="fp" novalidate aria-labelledby="fp-title">
+      <div class="fp-head" aria-label="Tempest Federal Bank"><b>TEMPEST</b><span>FEDERAL BANK</span></div>
+      <h2 id="fp-title">Reset Your Password</h2>
+      <p class="lead">Enter your registered email address or phone number to receive a verification OTP code</p>
+      <div class="field">
+        <div class="control"><input id="fp-id" type="text" placeholder="Email address or Phone number" aria-label="Email address or phone number" autocomplete="username"></div>
+        <div class="error" aria-live="polite"></div>
+      </div>
+      <button type="submit" class="submit">Send OTP Code</button>
+      <p class="status" id="fp-status" role="status"></p>
+      <p class="foot"><button type="button" class="link" id="fp-back">Back to Sign In</button></p>
+    </form>
+  </main>
+
+<script>
+  const brand = document.getElementById('brand');
+  const name  = document.getElementById('name');
+  const card  = document.getElementById('card');
+  const regCard = document.getElementById('reg');
+  const fpCard = document.getElementById('fp');
+  const views = { signin: card, reg: regCard, forgot: fpCard };
+  let current = 'signin';
+  const status = document.getElementById('status');
+  const timers = [];
+
+  function play() {
+    timers.forEach(clearTimeout); timers.length = 0;
+    brand.className = 'brand';
+    card.classList.remove('in'); regCard.classList.remove('in'); fpCard.classList.remove('in'); current = 'signin';
+    brand.style.setProperty('--h', name.offsetHeight + 'px');
+    void brand.offsetWidth; // restart transitions
+
+    const steps = [
+      [300,  'dot'],      // 1. one dot in the centre
+      [1600, 'line'],     // 2. dot stretches into a vertical line
+      [2900, 'open'],     // 3. line expands into the name
+      [5000, 'up'],       // 4. name moves toward the top
+      [6300, 'logo-in']   // 5. logo slides in at the left of the name
+    ];
+    timers.push(setTimeout(() => card.classList.add('in'), 7600)); // 6. sign-in card appears
+    steps.forEach(([t, cls]) => timers.push(setTimeout(() => brand.classList.add(cls), t)));
+  }
+
+  document.fonts.ready.then(play);
+  brand.addEventListener('click', play); // click the name to replay
+  window.addEventListener('resize', () => brand.style.setProperty('--h', name.offsetHeight + 'px'));
+
+  // ---- Sign-in form (front-end only: connect it to your bank's server to really sign in) ----
+  const user = document.getElementById('user'), pass = document.getElementById('pass');
+  document.getElementById('show').addEventListener('click', e => {
+    const hidden = pass.type === 'password';
+    pass.type = hidden ? 'text' : 'password';
+    e.currentTarget.textContent = hidden ? 'Hide' : 'Show';
+    e.currentTarget.setAttribute('aria-pressed', hidden);
+  });
+  function check(input, field, err, msg) {
+    const bad = !input.value.trim();
+    document.getElementById(field).classList.toggle('bad', bad);
+    document.getElementById(err).textContent = bad ? msg : '';
+    return !bad;
+  }
+  card.addEventListener('submit', e => {
+    e.preventDefault();
+    const a = check(user, 'f-user', 'e-user', 'Enter your account number or phone.');
+    const b = check(pass, 'f-pass', 'e-pass', 'Enter your password.');
+    if (!a) user.focus(); else if (!b) pass.focus();
+    status.textContent = (a && b) ? 'Details checked. Connect this form to your server to sign in.' : '';
+  });
+  document.getElementById('forgot').addEventListener('click', () => go('forgot'));
+  document.getElementById('fp-back').addEventListener('click', () => go('signin'));
+  document.getElementById('register').addEventListener('click', () => go('reg'));
+  document.getElementById('to-signin').addEventListener('click', () => go('signin'));
+
+  // ---- Switch between the sign-in card and the register card ----
+  function go(name) {
+    if (name === current) return;
+    views[current].classList.remove('in');
+    current = name;
+    views[name].classList.add('in');
+    status.textContent = ''; document.getElementById('r-status').textContent = ''; document.getElementById('fp-status').textContent = '';
+    setTimeout(() => views[name].querySelector('input').focus({ preventScroll: true }), 450);
+  }
+
+  // ---- Register form (front-end checks only) ----
+  document.querySelectorAll('.eye').forEach(b => b.addEventListener('click', () => {
+    const input = document.getElementById(b.dataset.target);
+    const hide = input.type === 'text';
+    input.type = hide ? 'password' : 'text';
+    b.setAttribute('aria-pressed', !hide);
+    b.setAttribute('aria-label', hide ? 'Show password' : 'Hide password');
+  }));
+  function setErr(el, msg) {
+    const f = el.closest('.field');
+    f.classList.toggle('bad', !!msg);
+    f.querySelector('.error').textContent = msg || '';
+    return !msg;
+  }
+  regCard.addEventListener('submit', e => {
+    e.preventDefault();
+    const $ = id => document.getElementById(id);
+    const today = new Date().toISOString().slice(0, 10);
+    const checks = [
+      [$('r-name'),  !$('r-name').value.trim() && 'Enter your full name.'],
+      [$('r-email'), !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($('r-email').value.trim()) && 'Enter a valid email address.'],
+      [$('r-phone'), $('r-phone').value.replace(/\D/g, '').length < 7 && 'Enter a valid phone number.'],
+      [$('r-dob'),   (!$('r-dob').value ? 'Select your date of birth.' : $('r-dob').value > today ? 'Date of birth cannot be in the future.' : false)],
+      [$('r-type'),  !$('r-type').value && 'Select an account type.'],
+      [$('r-pass'),  $('r-pass').value.length < 8 && 'Use at least 8 characters.'],
+      [$('r-pass2'), ($('r-pass2').value !== $('r-pass').value || !$('r-pass2').value) && 'Passwords do not match.']
+    ];
+    const bad = checks.filter(([el, msg]) => !setErr(el, msg));
+    if (bad.length) bad[0][0].focus();
+    $('r-status').textContent = bad.length ? '' : 'Details checked. Connect this form to your server to create the account.';
+  });
+
+  // ---- Forgot-password form (front-end check only) ----
+  fpCard.addEventListener('submit', e => {
+    e.preventDefault();
+    const input = document.getElementById('fp-id'), v = input.value.trim();
+    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || (/^[+\d][\d\s\-()]*$/.test(v) && v.replace(/\D/g, '').length >= 7);
+    setErr(input, ok ? '' : 'Enter a valid email address or phone number.');
+    document.getElementById('fp-status').textContent = ok ? 'Details checked. Connect this form to your server to send the OTP.' : '';
+    if (!ok) input.focus();
+  });
+</script>
+</body>
+</html>

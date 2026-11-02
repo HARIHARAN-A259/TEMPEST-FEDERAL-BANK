@@ -1,0 +1,15 @@
+====================================================================
+                     TEMPEST FEDERAL BANK                           
+                 OFFICIAL TRANSACTION RECEIPT                       
+====================================================================
+  TRANSACTION ID : TXN2611020102                                    
+  DATE & TIME    : 2026-11-02 20:44:57                              
+  ACCOUNT NUMBER : TFB2712                                     
+  ACCOUNT HOLDER : venuprasadd mk                              
+  TYPE           : WITHDRAWAL                                       
+  AMOUNT         : $ 1000000000.00                               
+  UPDATED BALANCE: $ 999999999000000000.00                             
+====================================================================
+   Status: SUCCESSFUL - VERIFIED BY TEMPEST FEDERAL BANK CORE       
+   Thank you for banking with Tempest Federal Bank.                 
+====================================================================
